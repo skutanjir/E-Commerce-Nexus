@@ -1,80 +1,115 @@
 # E-Commerce Nexus
 
-E-Commerce Nexus is a premium, high-performance marketplace platform designed for a modern shopping experience. Built with a focus on speed, aesthetics, and robust functionality, it provides a complete solution for both buyers and sellers.
+E-Commerce Nexus is a professional-grade, high-performance marketplace platform designed for a premium shopping experience. This project serves as a full-stack solution integrating modern frontend technologies with a serverless backend and secure payment processing.
 
-## Core Features
+## System Architecture
 
-### For Buyers
-- Intuitive Product Browsing: Advanced filtering and category-based navigation.
-- Secure Checkout: Integrated with Midtrans for reliable payment processing.
-- Personalized Experience: Custom user dashboard and favorites system.
-- Real-time Updates: Instant cart management and order tracking.
+The application follows a modern decoupled architecture:
 
-### For Sellers
-- Comprehensive Dashboard: Real-time sales metrics, revenue tracking, and order management.
-- Product Management: Seamless tools to add, edit, and manage product listings.
-- Performance Analytics: Visual data representation for business growth.
+| Layer | Responsibility | Technology |
+|---|---|---|
+| **Frontend** | User Interface, Routing, State Management | React 19, Vite, Tailwind CSS |
+| **Logic** | Interactions, Animations, API Client | Framer Motion, Supabase JS |
+| **Backend** | Database, Authentication, Payments | Supabase (PostgreSQL, Edge Functions) |
+| **Payment Gateway** | Transaction Processing, Payment UI | Midtrans |
 
-### Infrastructure
-- Secure Authentication: Powered by Supabase Auth with Row Level Security (RLS).
-- Serverless Backend: Supabase Edge Functions for handling complex payment logic.
-- Responsive Design: Optimized for all devices using Tailwind CSS.
+---
 
-## Technology Stack
+## Project Structure
 
-- Frontend: React 19, Vite, Tailwind CSS 4
-- Animations: Framer Motion
-- Icons: Lucide React
-- Backend: Supabase (PostgreSQL, Edge Functions, Storage)
-- Payment Gateway: Midtrans
+The codebase is organized into modular directories for scalability:
 
-## Getting Started
+```text
+E-Commerce/
+├── src/
+│   ├── components/       # Reusable UI elements and layouts
+│   │   ├── layout/       # Shared components like Navbar, Footer
+│   │   └── ui/           # Atomic components (Buttons, Inputs, Cards)
+│   ├── context/          # React contexts for Auth, Cart, Favorites
+│   ├── data/             # Static configurations and constants
+│   ├── lib/              # Client initializations (Supabase, Midtrans)
+│   ├── pages/            # View components (Home, Shop, Dashboard, Info)
+│   └── types/            # TypeScript interface definitions
+├── supabase/
+│   ├── functions/        # Edge Functions (Pay, Webhooks)
+│   └── migrations/       # SQL scripts for database versioning
+└── README.md             # Project documentation
+```
 
-### Prerequisites
+---
 
-- Node.js (Version 18 or later)
-- Supabase Account and Project
-- Midtrans Sandbox Account
+## Database Schema
 
-### Installation
+The system uses a PostgreSQL database hosted on Supabase. Below is a summary of the core tables:
 
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/skutanjir/E-Commerce-Nexus.git
-   ```
+### Products
+Stores all items available for sale in the marketplace.
 
-2. Navigate to the project directory:
-   ```bash
-   cd E-Commerce-Nexus
-   ```
+| Column | Type | Description |
+|---|---|---|
+| `id` | UUID (PK) | Unique identifier for each product |
+| `name` | TEXT | Product name for display |
+| `description` | TEXT | Detailed product overview |
+| `price` | NUMERIC | Transactional price (USD) |
+| `category` | TEXT | Product categorization |
+| `stock` | INTEGER | Current inventory level |
+| `seller_id` | UUID (FK) | Reference to the product owner |
 
-3. Install dependencies:
-   ```bash
-   npm install
-   ```
+### Orders
+Manages the lifecycle of customer transactions.
 
-4. Configure Environment Variables:
-   - Duplicate the `.env.example` file and rename it to `.env`.
-   - Update the variables with your Supabase and Midtrans credentials.
+| Column | Type | Description |
+|---|---|---|
+| `id` | UUID (PK) | Unique identifier for the order |
+| `user_id` | UUID (FK) | Reference to the buyer |
+| `status` | TEXT | Order state (Pending, Paid, Shipped, Delivered) |
+| `total_amount` | NUMERIC | Grand total including shipping |
+| `shipping_address`| TEXT | Delivery destination details |
 
-5. Initialize Supabase:
-   - Run the migrations provided in the `supabase/migrations` directory against your project.
-   - Deploy the edge functions using `supabase functions deploy pay`.
+### Order Items
+Provides line-item detail for each order.
 
-6. Run the application:
-   ```bash
-   npm run dev
-   ```
+| Column | Type | Description |
+|---|---|---|
+| `id` | UUID (PK) | Reference for the specific item |
+| `order_id` | UUID (FK) | Reference to the parent order |
+| `product_id` | UUID (FK) | Reference to the item purchased |
+| `quantity` | INTEGER | Number of units purchased |
+| `price_at_time` | NUMERIC | Price of the item at purchase |
 
-## Documentation
+---
 
-The project includes various informational pages for support and company details:
-- About Us
-- Careers
-- Blog
-- Help Center
-- Shipping and Returns Policies
+## Core Workflows
+
+### 1. Authentication and Security
+- **Auth Provider**: Uses Supabase GoTrue for secure JWT-based sessions.
+- **Row Level Security (RLS)**: Fine-grained access control where users can only read their own orders and sellers can only view items related to their store.
+- **Security Definer Functions**: Custom SQL functions to safely check permissions without policy recursion.
+
+### 2. Payment Flow
+1. **Frontend**: Collects order details and initiates payment via `/checkout`.
+2. **Edge Function**: The `pay` function on Supabase calculates the final price and creates a Midtrans Snap transaction.
+3. **Midtrans**: Displays the payment UI and processes the transaction.
+4. **Synchronization**: Real-time status updates from Midtrans to the Supabase database.
+
+### 3. Seller Dashboard
+- **Analytics**: Calculates Total Revenue, Active Orders, and Sales Trends dynamically from the `orders` and `order_items` tables.
+- **Package Tracker**: Visual pipeline for order fulfillment (Processing -> To Ship -> In Transit -> Delivered).
+
+---
+
+## Technical Setup Guide
+
+### Local Environment
+1. **Dependencies**: Run `npm install` to install React and Vite dependencies.
+2. **Configuration**: Copy `.env.example` to `.env` and provide your Supabase URL and keys.
+3. **Development**: Use `npm run dev` to start the local server.
+
+### Supabase Integration
+1. **Migrations**: Apply the SQL files in `supabase/migrations/` to set up tables and RLS policies.
+2. **Secrets**: Set the `MIDTRANS_SERVER_KEY` in Supabase using `supabase secrets set`.
+
+---
 
 ## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+Licensed under the MIT License. See [LICENSE](LICENSE) for details.
