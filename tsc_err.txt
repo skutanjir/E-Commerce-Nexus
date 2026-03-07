@@ -1,0 +1,4 @@
+src/components/ui/ProductCard.tsx(64,33): error TS2322: Type 'number | undefined' is not assignable to type 'number'.
+  Type 'undefined' is not assignable to type 'number'.
+src/pages/SellerDashboard.tsx(11,12): error TS6133: 'orderItems' is declared but its value is never read.
+src/pages/SellerDashboard.tsx(11,24): error TS6133: 'setOrderItems' is declared but its value is never read.
