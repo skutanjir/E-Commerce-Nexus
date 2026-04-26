@@ -181,6 +181,10 @@ All environment variables used by the client must be prefixed with `VITE_` so th
 |---|---|---|
 | `VITE_SUPABASE_URL` | The URL of your Supabase project | Yes |
 | `VITE_SUPABASE_ANON_KEY` | The public anonymous key from your Supabase project | Yes |
+| `VITE_MIDTRANS_CLIENT_KEY` | Midtrans client key for payment processing | Yes |
+| `VITE_MIDTRANS_IS_PRODUCTION` | Set to `true` in production, `false` for sandbox | Yes |
+| `VITE_GOOGLE_CLIENT_ID` | Google OAuth client ID for social login | Optional |
+| `VITE_GOOGLE_CALLBACK_URL` | OAuth callback URL — must match the one configured in Supabase Auth providers | Optional |
 
 See `.env.example` for a template. Never commit the `.env` file.
 
