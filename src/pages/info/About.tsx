@@ -22,8 +22,8 @@ export default function AboutUs() {
                 Membangun Ekosistem Digital untuk Indonesia
               </h1>
               <p className="text-white/80 text-xl md:text-2xl font-light mb-8 max-w-xl">
-                NEXUS is more than a marketplace. It's a digital curator
-                designed for the modern lifestyle.
+                NEXUS lebih dari sekadar marketplace. Ini adalah kurator digital
+                yang dirancang untuk gaya hidup modern.
               </p>
               <button className="bg-gradient-to-r from-primary to-primary-container text-on-primary px-8 py-4 rounded font-semibold transition-transform active:scale-95 editorial-shadow">
                 Pelajari Lebih Lanjut
@@ -36,21 +36,19 @@ export default function AboutUs() {
           <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-2 gap-16 items-center">
             <div className="order-2 md:order-1">
               <h2 className="text-3xl md:text-4xl font-bold tracking-tight text-on-surface mb-8">
-                Our Story
+                Cerita Kami
               </h2>
               <div className="space-y-6 text-on-surface-variant leading-relaxed text-lg">
                 <p>
-                  Founded in 2024, NEXUS emerged from a simple yet ambitious
-                  vision: to redefine how Indonesia experiences the digital
-                  world. In a landscape filled with noise, we chose to be the
-                  signal.
+                  Didirikan pada tahun 2024, NEXUS lahir dari visi sederhana namun ambisius:
+                  mendefinisikan ulang cara Indonesia merasakan dunia digital.
+                  Di tengah lautan kebisingan, kami memilih untuk menjadi sinyal yang jelas.
                 </p>
                 <p>
-                  As a "Digital Curator," we don't just list products; we select
-                  technology and lifestyle essentials that elevate the standard
-                  of living. Our roots are firmly planted in the spirit of
-                  Nusantara, combined with a relentless drive for global
-                  innovation.
+                  Sebagai "Kurator Digital", kami tidak sekadar mendaftarkan produk; kami memilih
+                  teknologi dan gaya hidup esensial yang meningkatkan standar kehidupan.
+                  Akar kami tertancap kuat pada semangat Nusantara, dipadukan dengan
+                  dorongan tanpa henti untuk inovasi global.
                 </p>
               </div>
             </div>
@@ -70,7 +68,7 @@ export default function AboutUs() {
               <div>
                 <div className="text-5xl font-black text-primary mb-2">1M+</div>
                 <div className="text-on-surface-variant font-medium">
-                  Active Users
+                  Pengguna Aktif
                 </div>
               </div>
               <div>
@@ -78,7 +76,7 @@ export default function AboutUs() {
                   50k+
                 </div>
                 <div className="text-on-surface-variant font-medium">
-                  Trusted Merchants
+                  Merchant Terpercaya
                 </div>
               </div>
               <div>
@@ -86,7 +84,7 @@ export default function AboutUs() {
                   24/7
                 </div>
                 <div className="text-on-surface-variant font-medium">
-                  Concierge Support
+                  Dukungan Pelanggan
                 </div>
               </div>
             </div>
@@ -97,7 +95,7 @@ export default function AboutUs() {
           <div className="max-w-7xl mx-auto px-6">
             <div className="text-center mb-16">
               <h2 className="text-4xl font-extrabold tracking-tight mb-4">
-                Our Mission
+                Misi Kami
               </h2>
               <div className="w-20 h-1 bg-primary mx-auto"></div>
             </div>
@@ -109,10 +107,10 @@ export default function AboutUs() {
                     lightbulb
                   </span>
                 </div>
-                <h3 className="text-xl font-bold mb-4">Innovation</h3>
+                <h3 className="text-xl font-bold mb-4">Inovasi</h3>
                 <p className="text-on-surface-variant">
-                  Pushing boundaries with cutting-edge technology and localized
-                  digital solutions for the archipelago.
+                  Melampaui batasan dengan teknologi mutakhir dan solusi digital
+                  yang dilokalkan untuk kepulauan Nusantara.
                 </p>
               </div>
               {/*  Quality  */}
@@ -122,10 +120,10 @@ export default function AboutUs() {
                     verified
                   </span>
                 </div>
-                <h3 className="text-xl font-bold mb-4">Quality</h3>
+                <h3 className="text-xl font-bold mb-4">Kualitas</h3>
                 <p className="text-on-surface-variant">
-                  Curating only the best. Every merchant and product undergoes
-                  rigorous vetting for excellence.
+                  Hanya memilih yang terbaik. Setiap merchant dan produk melewati
+                  seleksi ketat demi keunggulan.
                 </p>
               </div>
               {/*  Trust  */}
@@ -135,10 +133,10 @@ export default function AboutUs() {
                     shield
                   </span>
                 </div>
-                <h3 className="text-xl font-bold mb-4">Trust</h3>
+                <h3 className="text-xl font-bold mb-4">Kepercayaan</h3>
                 <p className="text-on-surface-variant">
-                  Building lasting relationships through transparency, security,
-                  and world-class reliability.
+                  Membangun hubungan jangka panjang melalui transparansi,
+                  keamanan, dan keandalan kelas dunia.
                 </p>
               </div>
             </div>
@@ -149,37 +147,37 @@ export default function AboutUs() {
           <div className="max-w-7xl mx-auto px-6">
             <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
               <div className="md:col-span-4 bg-primary text-on-primary p-12 rounded-xl flex flex-col justify-end">
-                <h2 className="text-3xl font-black mb-4">Core Values</h2>
+                <h2 className="text-3xl font-black mb-4">Nilai-Nilai Kami</h2>
                 <p className="text-primary-fixed-dim">
-                  The DNA of every decision we make at NEXUS.
+                  DNA dari setiap keputusan yang kami buat di NEXUS.
                 </p>
               </div>
               <div className="md:col-span-8 grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="bg-surface-container-lowest p-8 rounded-xl editorial-shadow">
                   <h4 className="text-lg font-bold text-primary mb-2">
-                    Customer First
+                    Pelanggan Utama
                   </h4>
                   <p className="text-on-surface-variant">
-                    Your journey is our priority. We listen, adapt, and serve
-                    with empathy.
+                    Perjalanan Anda adalah prioritas kami. Kami mendengarkan,
+                    beradaptasi, dan melayani dengan empati.
                   </p>
                 </div>
                 <div className="bg-surface-container-lowest p-8 rounded-xl editorial-shadow">
                   <h4 className="text-lg font-bold text-primary mb-2">
-                    Integrity
+                    Integritas
                   </h4>
                   <p className="text-on-surface-variant">
-                    Honesty in every transaction. We stand by our promises,
-                    always.
+                    Kejujuran dalam setiap transaksi. Kami memegang teguh
+                    janji kami, selalu.
                   </p>
                 </div>
                 <div className="md:col-span-2 bg-surface-container-lowest p-8 rounded-xl editorial-shadow">
                   <h4 className="text-lg font-bold text-primary mb-2">
-                    Excellence
+                    Keunggulan
                   </h4>
                   <p className="text-on-surface-variant">
-                    Average is not in our vocabulary. We strive for the peak in
-                    product curation and user experience.
+                    Rata-rata bukan kamus kami. Kami berusaha mencapai puncak
+                    dalam kurasi produk dan pengalaman pengguna.
                   </p>
                 </div>
               </div>
@@ -190,63 +188,34 @@ export default function AboutUs() {
         <section className="py-24 bg-surface">
           <div className="max-w-7xl mx-auto px-6 text-center">
             <h2 className="text-4xl font-extrabold mb-16 tracking-tight">
-              Meet Our Leadership
+              Kenali Tim Kami
             </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-12">
-              {/*  Placeholder Founder 1  */}
-              <div className="group">
-                <div className="aspect-square rounded-xl overflow-hidden mb-6 editorial-shadow relative">
-                  <img
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                    data-alt="Professional portrait of a confident Indonesian male executive in a smart casual blazer, warm lighting, blurred corporate background"
-                    src="https://lh3.googleusercontent.com/aida-public/AB6AXuCZzR14OmvEGnv4r84Su86DL2huoy1qq2C8jFjNucO7X12puPsRfcrZ1419G2md33nN-z0lO2g6RAGjTYP1qSblpmZ_rSM6_AswkrLQWEkK_1Z68KJ0aLexubRW_9Eq9IIcdqEp9ItawJI2DHAYCHcUCXyzbdrUU61FBiTVLHSyus8CvTNoH-24tjksIcae6RGtQoem787VlLwugmS3eTUjbnBltNrA4hjQ3yb8bfHv-CTG4wOleVSEn2Yx1V5KNgCDOOR_gwvAE4U"
-                  />
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-12 max-w-4xl mx-auto">
+              <div className="group flex flex-col items-center">
+                <div className="w-24 h-24 rounded-full bg-primary/10 flex items-center justify-center mb-6 editorial-shadow">
+                  <span className="material-symbols-outlined text-primary text-4xl">person</span>
                 </div>
-                <h4 className="text-xl font-bold">Adi Nugroho</h4>
-                <p className="text-primary font-medium text-sm tracking-widest uppercase">
-                  CEO &amp; Founder
+                <h4 className="text-xl font-bold">Erick Haidar Rahmat</h4>
+                <p className="text-primary font-medium text-sm tracking-widest uppercase mt-1">
+                  3124500047
                 </p>
               </div>
-              {/*  Placeholder Founder 2  */}
-              <div className="group">
-                <div className="aspect-square rounded-xl overflow-hidden mb-6 editorial-shadow relative">
-                  <img
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                    data-alt="Elegant Indonesian female leader in a professional setting, soft natural light, minimalist aesthetic"
-                    src="https://lh3.googleusercontent.com/aida-public/AB6AXuCdnDKgzMJZMTr0wxMTXf6HmmR-1cLqllzvZxpitOJLm8uy2-7Oifdp7ul8GS-Fm9RMILKAohtcWFw0r_0qYSs_lUnfgLRchk1weIYg9nnsj_jFo7tf0VA2tw1t1T4UT-l_Xv-VjotouSlQVTifbktHt-4jVOusHEWB-0KkJMAePapPe3KC9rZ0kkmtDb_riKaWYC1GdAnwpJTw5gbq5wcaFWvfib_-G7bZ03j1Ef0i3bU7-luxswpariSSgKM3bASfkaFLpBkxqaI"
-                  />
+              <div className="group flex flex-col items-center">
+                <div className="w-24 h-24 rounded-full bg-primary/10 flex items-center justify-center mb-6 editorial-shadow">
+                  <span className="material-symbols-outlined text-primary text-4xl">person</span>
                 </div>
-                <h4 className="text-xl font-bold">Sari Wijaya</h4>
-                <p className="text-primary font-medium text-sm tracking-widest uppercase">
-                  Chief Product Officer
+                <h4 className="text-xl font-bold">Sulistyo Fajar Pratama</h4>
+                <p className="text-primary font-medium text-sm tracking-widest uppercase mt-1">
+                  3124500037
                 </p>
               </div>
-              {/*  Placeholder Founder 3  */}
-              <div className="group">
-                <div className="aspect-square rounded-xl overflow-hidden mb-6 editorial-shadow relative">
-                  <img
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                    data-alt="Young energetic Asian technology lead with glasses, creative studio lighting, soft color palette"
-                    src="https://lh3.googleusercontent.com/aida-public/AB6AXuCJsIO-pt5W7i_WqD6ykqcOqb04EBvSeSTOweZRg0lJ7BwgYmgWUGGAFEq1OxUnc9H6Yo4VoYNmU5YEWMnUj26lRcpXJvixUeDuM1o6gViI5PzFkIQtYKD6xc9_bbwZjIyIGT3cWaWcOtGD-ToR3MouVg1woEBymM7V0XkSPOPNzlcci3yVf93Afi-adFW-k9moh9BfEOFZU-Vn-zJ_O2dd_cLb_NTXRYEVvcmFunlOVRSQtQ3-dODuRPAaaoi5ebcVmI-Q0Nju7Q8"
-                  />
+              <div className="group flex flex-col items-center">
+                <div className="w-24 h-24 rounded-full bg-primary/10 flex items-center justify-center mb-6 editorial-shadow">
+                  <span className="material-symbols-outlined text-primary text-4xl">person</span>
                 </div>
-                <h4 className="text-xl font-bold">Budi Santoso</h4>
-                <p className="text-primary font-medium text-sm tracking-widest uppercase">
-                  CTO
-                </p>
-              </div>
-              {/*  Placeholder Founder 4  */}
-              <div className="group">
-                <div className="aspect-square rounded-xl overflow-hidden mb-6 editorial-shadow relative">
-                  <img
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                    data-alt="Professional Asian woman in creative leadership, modern interior background, clean lighting"
-                    src="https://lh3.googleusercontent.com/aida-public/AB6AXuDdFFCsv141DuqDwiSpxpns4rYlw0cTvEHHaNBxDy-1ZnsX8Y8oveccQigrgUCb4rRLJ69wPMmenMhYpq4T6G8dKZI-rZTQ7LgCSaQYuu2HaF0mPT7ZtcHp1tA-vFuRuVaKJN3twKCSm5ViFKS7rI9PPax5dzH3bxHbWem77UfuTAU16UQ1JLvCuOuzEnpTC21zu6DRLCkovCskax9R_62ebCOsb0tSTQWi5lX9fM2PpE8mMV3B_JrSjjgHwnC396e8p1061SUfz6g"
-                  />
-                </div>
-                <h4 className="text-xl font-bold">Lina Putri</h4>
-                <p className="text-primary font-medium text-sm tracking-widest uppercase">
-                  Head of Operations
+                <h4 className="text-xl font-bold">Wina Rahmalia</h4>
+                <p className="text-primary font-medium text-sm tracking-widest uppercase mt-1">
+                  3124500052
                 </p>
               </div>
             </div>
@@ -262,18 +231,18 @@ export default function AboutUs() {
             />
             <div className="relative z-10 text-center text-white px-6">
               <h2 className="text-4xl md:text-5xl font-black mb-6 tracking-tight">
-                Ready to Experience the Nexus?
+                Siap Merasakan Pengalaman NEXUS?
               </h2>
               <p className="text-lg md:text-xl text-white/80 mb-10 max-w-2xl mx-auto">
-                Join a community that values quality and innovation above all
-                else. Start your journey with the Digital Curator.
+                Bergabunglah dengan komunitas yang menghargai kualitas dan inovasi
+                di atas segalanya. Mulai perjalanan Anda bersama Kurator Digital kami.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <button className="bg-white text-primary px-10 py-4 rounded-lg font-bold text-lg transition-transform active:scale-95 shadow-xl">
-                  Start Shopping
+                  Mulai Belanja
                 </button>
                 <button className="bg-transparent border border-white/30 backdrop-blur-sm text-white px-10 py-4 rounded-lg font-bold text-lg hover:bg-white/10 transition-colors">
-                  Join Community
+                  Pelajari Lebih Lanjut
                 </button>
               </div>
             </div>

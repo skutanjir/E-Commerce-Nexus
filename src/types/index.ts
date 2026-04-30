@@ -1,5 +1,11 @@
 // src/types/index.ts
 
+export interface AuthUser {
+  id: string;
+  email: string;
+  role: 'user' | 'seller';
+}
+
 export interface Profile {
   id: string;
   email: string | null;
@@ -59,10 +65,24 @@ export interface Order {
   id: string;
   user_id: string;
   status: 'pending' | 'shipped' | 'delivered' | 'completed' | 'cancelled';
+  payment_status?: 'unpaid' | 'paid' | 'refunded';
+  snap_token?: string | null;
+  shipping_address?: string | null;
   total_amount: number;
   created_at: string;
   order_items?: OrderItem[];
   profile?: Profile;
+}
+
+export interface ChatMessage {
+  id: string;
+  order_id: string;
+  sender_id: string;
+  sender_role: 'user' | 'seller';
+  message: string | null;
+  image_url: string | null;
+  message_type: 'text' | 'image' | 'cancellation' | 'system';
+  created_at: string;
 }
 
 export interface OrderItem {
@@ -72,4 +92,14 @@ export interface OrderItem {
   quantity: number;
   price_at_purchase: number;
   product?: Product;
+}
+
+export interface ProductReview {
+  id: string;
+  product_id: string;
+  user_id: string;
+  rating: number;
+  comment: string | null;
+  created_at: string;
+  profile?: Pick<Profile, 'full_name' | 'avatar_url'>;
 }

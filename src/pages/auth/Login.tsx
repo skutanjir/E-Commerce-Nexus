@@ -1,13 +1,12 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useState } from "react";
-import { supabase } from "../../lib/supabase";
+import { api, setAccessToken } from "../../lib/api";
+import { useUser } from "../../contexts/UserContext";
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const [formData, setFormData] = useState({
-    email: "",
-    password: "",
-  });
+  const { refreshProfile } = useUser();
+  const [formData, setFormData] = useState({ email: "", password: "" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
@@ -18,47 +17,24 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const { data, error: signInError } = await supabase.auth.signInWithPassword({
+      const res = await api.post('/auth/login', {
         email: formData.email,
         password: formData.password,
       });
 
-      if (signInError) throw signInError;
+      const { accessToken, user } = res.data;
+      setAccessToken(accessToken);
+      await refreshProfile();
 
-      if (data.user) {
-        // Fetch profile to check role
-        const { data: profile, error: profileError } = await supabase
-          .from("profiles")
-          .select("role")
-          .eq("id", data.user.id)
-          .single();
-
-        if (profileError) throw profileError;
-
-        if (profile?.role === "seller") {
-          navigate("/admin-dashboard-overview");
-        } else {
-          navigate("/user-dashboard");
-        }
+      if (user.role === 'seller') {
+        navigate('/admin-dashboard-overview');
+      } else {
+        navigate('/user-dashboard');
       }
-    } catch (err: any) {
-      setError(err.message || "An error occurred during login");
+    } catch (err: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
+      setError(err.response?.data?.error || err.message || 'Terjadi kesalahan saat masuk');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleGoogleLogin = async () => {
-    try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo: window.location.origin + "/user-dashboard"
-        }
-      });
-      if (error) throw error;
-    } catch (err: any) {
-      setError(err.message || "Could not connect to Google");
     }
   };
 
@@ -101,9 +77,7 @@ export default function LoginPage() {
                 </label>
                 <div className="relative group">
                   <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-outline">
-                    <span className="material-symbols-outlined text-[20px]">
-                      mail
-                    </span>
+                    <span className="material-symbols-outlined text-[20px]">mail</span>
                   </div>
                   <input
                     className="w-full pl-11 pr-4 py-3 bg-surface-container-lowest border border-outline-variant/20 rounded-lg focus:ring-2 focus:ring-primary/10 focus:border-primary outline-none transition-all placeholder:text-outline/60 text-on-surface"
@@ -126,9 +100,7 @@ export default function LoginPage() {
                 </div>
                 <div className="relative group">
                   <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-outline">
-                    <span className="material-symbols-outlined text-[20px]">
-                      lock
-                    </span>
+                    <span className="material-symbols-outlined text-[20px]">lock</span>
                   </div>
                   <input
                     className="w-full pl-11 pr-11 py-3 bg-surface-container-lowest border border-outline-variant/20 rounded-lg focus:ring-2 focus:ring-primary/10 focus:border-primary outline-none transition-all placeholder:text-outline/60 text-on-surface"
@@ -179,35 +151,8 @@ export default function LoginPage() {
               >
                 {loading ? "Masuk..." : "Masuk"}
               </button>
-
-              <div className="relative py-4">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-outline-variant/20"></div>
-                </div>
-                <div className="relative flex justify-center text-xs">
-                  <span className="bg-surface-container-lowest px-4 text-outline font-medium">
-                    atau masuk dengan
-                  </span>
-                </div>
-              </div>
-
-              <div className="flex justify-center">
-                <button
-                  className="w-14 h-14 flex items-center justify-center border border-outline-variant/20 bg-surface-container-lowest rounded-full hover:bg-surface-container-low transition-all active:scale-[0.98] hover:shadow-sm"
-                  type="button"
-                  title="Google Login"
-                  onClick={handleGoogleLogin}
-                >
-                  <img
-                    alt="Google"
-                    className="w-6 h-6"
-                    src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg"
-                  />
-                </button>
-              </div>
             </form>
 
-            {/*  Footer Link  */}
             <div className="bg-surface-container-low py-6 text-center">
               <p className="text-sm text-on-surface-variant">
                 Belum punya akun?
@@ -221,27 +166,19 @@ export default function LoginPage() {
             </div>
           </div>
 
-          {/*  Trust Badges  */}
           <div className="mt-8 flex items-center justify-center gap-6 opacity-40 grayscale">
             <div className="flex items-center gap-1">
-              <span className="material-symbols-outlined text-sm">
-                verified_user
-              </span>
-              <span className="text-[10px] font-bold tracking-widest uppercase">
-                Login Aman
-              </span>
+              <span className="material-symbols-outlined text-sm">verified_user</span>
+              <span className="text-[10px] font-bold tracking-widest uppercase">Login Aman</span>
             </div>
             <div className="flex items-center gap-1">
               <span className="material-symbols-outlined text-sm">encrypted</span>
-              <span className="text-[10px] font-bold tracking-widest uppercase">
-                SSL Terenkripsi
-              </span>
+              <span className="text-[10px] font-bold tracking-widest uppercase">SSL Terenkripsi</span>
             </div>
           </div>
         </div>
       </main>
 
-      {/*  Background Decoration  */}
       <div className="fixed top-0 left-0 w-full h-full -z-10 overflow-hidden pointer-events-none">
         <div className="absolute -top-1/4 -right-1/4 w-1/2 h-1/2 bg-primary/5 rounded-full blur-[120px]"></div>
         <div className="absolute -bottom-1/4 -left-1/4 w-1/2 h-1/2 bg-secondary-container/5 rounded-full blur-[120px]"></div>

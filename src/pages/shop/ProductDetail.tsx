@@ -1,39 +1,41 @@
 import { useEffect, useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import Navbar from "../../components/layout/Navbar";
 import Footer from "../../components/layout/Footer";
-import { supabase } from "../../lib/supabase";
+import { api } from "../../lib/api";
+import { useUser } from "../../contexts/UserContext";
 
 import type { Product } from "../../types";
 
 export default function ProductDetail() {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const { user: currentUser } = useUser();
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);
+  const [avgRating, setAvgRating] = useState<number>(0);
+  const [reviewCount, setReviewCount] = useState<number>(0);
+  const [addedMsg, setAddedMsg] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchProduct() {
       try {
         setLoading(true);
-        const { data, error: fetchError } = await supabase
-          .from("products")
-          .select(`
-            *,
-            category:categories (
-              name,
-              slug
-            )
-          `)
-          .eq("id", id)
-          .single();
+        // The REST API /products/:id will return the product with category and reviews injected
+        const res = await api.get(`/products/${id}`);
+        const productData = res.data;
+        setProduct(productData);
 
-        if (fetchError) throw fetchError;
-        setProduct(data as unknown as Product);
-      } catch (err) {
-        console.error("Error fetching product:", (err as Error).message);
-        setError((err as Error).message);
+        if (productData.reviews && productData.reviews.length > 0) {
+          const avg = productData.reviews.reduce((sum: number, r: any) => sum + Number(r.rating), 0) / productData.reviews.length;
+          setAvgRating(Math.round(avg * 10) / 10);
+          setReviewCount(productData.reviews.length);
+        }
+      } catch (err: any) {
+        console.error("Error fetching product:", err.message);
+        setError(err.response?.data?.error || err.message);
       } finally {
         setLoading(false);
       }
@@ -44,10 +46,12 @@ export default function ProductDetail() {
     }
   }, [id]);
 
-  const [addedMsg, setAddedMsg] = useState<string | null>(null);
-
   const handleAddToCart = () => {
     if (!product) return;
+    if (!currentUser) {
+      navigate("/login-page");
+      return;
+    }
     const saved = localStorage.getItem("nexus_cart");
     const cart = saved ? JSON.parse(saved) : [];
     const existing = cart.find((item: { id: string }) => item.id === product.id);
@@ -60,6 +64,25 @@ export default function ProductDetail() {
     window.dispatchEvent(new Event("nexus:cart-updated"));
     setAddedMsg(`${quantity} item ditambahkan ke keranjang!`);
     setTimeout(() => setAddedMsg(null), 3000);
+  };
+
+  const handleBuyNow = () => {
+    if (!currentUser) {
+      navigate("/login-page");
+      return;
+    }
+    if (!product) return;
+    const saved = localStorage.getItem("nexus_cart");
+    const cart = saved ? JSON.parse(saved) : [];
+    const existing = cart.find((item: { id: string }) => item.id === product.id);
+    if (existing) {
+      existing.quantity += quantity;
+    } else {
+      cart.push({ id: product.id, name: product.name, price: product.price, image_url: product.image_url, quantity });
+    }
+    localStorage.setItem("nexus_cart", JSON.stringify(cart));
+    window.dispatchEvent(new Event("nexus:cart-updated"));
+    navigate("/checkout-flow");
   };
 
   if (loading) {
@@ -76,12 +99,12 @@ export default function ProductDetail() {
         <Navbar />
         <main className="flex-1 flex flex-col justify-center items-center p-8">
           <span className="material-symbols-outlined text-6xl text-error mb-4">error</span>
-          <h2 className="text-2xl font-bold mb-2">Product Not Found</h2>
+          <h2 className="text-2xl font-bold mb-2">Produk Tidak Ditemukan</h2>
           <p className="text-on-surface-variant mb-6 text-center max-w-md">
-            The product you're looking for doesn't exist or failed to load.
+            Produk yang Anda cari tidak ada atau gagal dimuat.
           </p>
           <Link to="/" className="bg-primary text-on-primary px-6 py-3 rounded-lg font-bold">
-            Back to Home
+            Kembali ke Beranda
           </Link>
         </main>
         <Footer />
@@ -95,16 +118,12 @@ export default function ProductDetail() {
       <main className="pt-32 pb-20 max-w-7xl mx-auto px-6 lg:px-8">
         {/*  Breadcrumb  */}
         <nav className="flex mb-12 text-sm font-medium text-on-surface-variant font-label">
-          <Link className="hover:text-primary transition-colors" to="/">
-            Home
-          </Link>
+          <Link className="hover:text-primary transition-colors" to="/">Beranda</Link>
           <span className="mx-2 opacity-30">/</span>
-          <Link className="hover:text-primary transition-colors" to="/categories">
-            Shop
-          </Link>
+          <Link className="hover:text-primary transition-colors" to="/categories">Toko</Link>
           <span className="mx-2 opacity-30">/</span>
           <Link className="hover:text-primary transition-colors capitalize" to={`/categories/${product.category?.slug || 'all'}`}>
-            {product.category?.name || 'Category'}
+            {product.category?.name || 'Kategori'}
           </Link>
           <span className="mx-2 opacity-30">/</span>
           <span className="text-on-surface">{product.name}</span>
@@ -125,7 +144,6 @@ export default function ProductDetail() {
               <div className="aspect-square rounded-xl border-2 border-primary overflow-hidden cursor-pointer">
                 <img src={product.image_url || "/placeholder.jpg"} className="w-full h-full object-cover" />
               </div>
-              {/* Other thumbnails can be static or dynamic if images were an array */}
             </div>
           </div>
 
@@ -139,16 +157,29 @@ export default function ProductDetail() {
             <h1 className="text-4xl lg:text-5xl font-extrabold tracking-tight text-on-surface mb-6 leading-tight">
               {product.name}
             </h1>
-            
+
             <div className="flex items-center gap-6 mb-8">
-              <div className="flex items-center text-secondary-container">
-                {[1,2,3,4,5].map(s => (
-                  <span key={s} className="material-symbols-outlined text-xl" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
-                ))}
-                <span className="ml-3 text-sm font-black text-on-surface">5.0</span>
+              <div className="flex items-center gap-1">
+                {[1,2,3,4,5].map(s => {
+                  const filled = avgRating >= s;
+                  const half = !filled && avgRating >= s - 0.5;
+                  return (
+                    <span
+                      key={s}
+                      className="material-symbols-outlined text-xl text-amber-400"
+                      style={{ fontVariationSettings: `'FILL' ${filled || half ? 1 : 0}` }}
+                    >
+                      {half ? "star_half" : "star"}
+                    </span>
+                  );
+                })}
+                <span className="ml-2 text-sm font-black text-on-surface">
+                  {reviewCount > 0 ? avgRating.toFixed(1) : "Belum ada rating"}
+                </span>
               </div>
-              <span className="text-on-surface-variant text-sm font-medium">124 Reviews</span>
-              <span className="text-on-surface-variant text-sm font-medium">850 Sold</span>
+              {reviewCount > 0 && (
+                <span className="text-on-surface-variant text-sm font-medium">{reviewCount} Ulasan</span>
+              )}
             </div>
 
             <div className="flex items-baseline gap-4 mb-10">
@@ -164,14 +195,14 @@ export default function ProductDetail() {
                   Jumlah Pesanan
                 </h3>
                 <div className="flex items-center w-fit border border-outline-variant/20 rounded-xl bg-surface-container-low overflow-hidden">
-                  <button 
+                  <button
                     onClick={() => setQuantity(q => Math.max(1, q - 1))}
                     className="p-4 text-on-surface hover:bg-primary/10 hover:text-primary transition-all"
                   >
                     <span className="material-symbols-outlined text-sm">remove</span>
                   </button>
                   <span className="px-8 font-black text-lg">{quantity}</span>
-                  <button 
+                  <button
                     onClick={() => setQuantity(q => q + 1)}
                     className="p-4 text-on-surface hover:bg-primary/10 hover:text-primary transition-all"
                   >
@@ -181,16 +212,26 @@ export default function ProductDetail() {
               </div>
 
               {/*  CTAs  */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <button 
+              {!currentUser && (
+                <div className="flex items-center gap-3 bg-amber-50 text-amber-700 px-5 py-3 rounded-xl border border-amber-200 text-sm font-bold mb-2">
+                  <span className="material-symbols-outlined text-lg">lock</span>
+                  Silakan <Link to="/login-page" className="underline ml-1">masuk</Link> terlebih dahulu untuk membeli produk.
+                </div>
+              )}
+              <div className="flex flex-col gap-4">
+                <button
+                  onClick={handleBuyNow}
+                  className="w-full bg-primary text-on-primary py-5 rounded-xl font-black text-lg hover:shadow-2xl hover:shadow-primary/30 transition-all active:scale-95 flex items-center justify-center gap-3"
+                >
+                  <span className="material-symbols-outlined">bolt</span>
+                  Beli Sekarang
+                </button>
+                <button
                   onClick={handleAddToCart}
-                  className="flex-1 bg-primary text-on-primary py-5 rounded-xl font-black text-lg hover:shadow-2xl hover:shadow-primary/30 transition-all active:scale-95 flex items-center justify-center gap-3"
+                  className="w-full border-2 border-primary text-primary py-5 rounded-xl font-black text-lg hover:bg-primary/5 transition-all active:scale-95 flex items-center justify-center gap-3"
                 >
                   <span className="material-symbols-outlined">shopping_cart</span>
-                  Add to Cart
-                </button>
-                <button className="flex-1 border-2 border-primary text-primary py-5 rounded-xl font-black text-lg hover:bg-primary/5 transition-all active:scale-95">
-                  Beli Sekarang
+                  Tambah ke Keranjang
                 </button>
               </div>
             </div>
@@ -205,9 +246,9 @@ export default function ProductDetail() {
 
             {/*  Description Preview  */}
             <div className="space-y-6">
-              <h3 className="text-sm font-black text-on-surface-variant uppercase tracking-widest">Description</h3>
+              <h3 className="text-sm font-black text-on-surface-variant uppercase tracking-widest">Deskripsi</h3>
               <p className="text-on-surface-variant leading-relaxed text-lg italic">
-                "{product.description || 'No description available for this masterpiece.'}"
+                "{product.description || 'Belum ada deskripsi untuk produk ini.'}"
               </p>
             </div>
           </div>
@@ -223,23 +264,23 @@ export default function ProductDetail() {
             </div>
             <div className="p-12 lg:p-20">
               <div className="max-w-4xl space-y-8">
-                <h2 className="text-3xl font-black text-on-surface">Product Specifications & Benefits</h2>
+                <h2 className="text-3xl font-black text-on-surface">Spesifikasi & Keunggulan Produk</h2>
                 <p className="text-on-surface-variant leading-relaxed text-xl">
-                  {product.description || 'This premium Nexus product is engineered for the highest standard of living, blending technology and design seamlessly.'}
+                  {product.description || 'Produk NEXUS premium ini dirancang dengan standar kualitas tertinggi, memadukan teknologi dan desain secara sempurna.'}
                 </p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6">
                   <div className="flex items-start gap-4 p-6 bg-surface-container-low rounded-2xl">
                     <span className="material-symbols-outlined text-primary text-3xl">verified</span>
                     <div>
-                      <p className="font-bold text-on-surface">Authenticity Guaranteed</p>
-                      <p className="text-sm text-on-surface-variant">100% Genuine Nexus Product</p>
+                      <p className="font-bold text-on-surface">Keaslian Terjamin</p>
+                      <p className="text-sm text-on-surface-variant">100% Produk NEXUS Original</p>
                     </div>
                   </div>
                   <div className="flex items-start gap-4 p-6 bg-surface-container-low rounded-2xl">
                     <span className="material-symbols-outlined text-primary text-3xl">local_shipping</span>
                     <div>
-                      <p className="font-bold text-on-surface">Fast Track Logistics</p>
-                      <p className="text-sm text-on-surface-variant">Priority shipping on all orders</p>
+                      <p className="font-bold text-on-surface">Pengiriman Cepat</p>
+                      <p className="text-sm text-on-surface-variant">Prioritas pengiriman untuk semua pesanan</p>
                     </div>
                   </div>
                 </div>

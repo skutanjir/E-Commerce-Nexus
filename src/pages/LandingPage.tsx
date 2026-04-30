@@ -2,8 +2,7 @@ import { useEffect, useState } from "react";
 import Navbar from "../components/layout/Navbar";
 import Footer from "../components/layout/Footer";
 import { Link } from "react-router-dom";
-import { supabase } from "../lib/supabase";
-
+import { api } from "../lib/api";
 import type { Product, Category } from "../types";
 
 export default function LandingPage() {
@@ -15,22 +14,21 @@ export default function LandingPage() {
     async function fetchData() {
       try {
         setLoading(true);
-        
-        // Fetch categories (top 6 for popular section)
-        const { data: catData } = await supabase
-          .from("categories")
-          .select("*")
-          .limit(6);
-        
-        // Fetch featured products (latest 4 for choices)
-        const { data: prodData } = await supabase
-          .from("products")
-          .select("*, category:categories(name)")
-          .limit(4)
-          .order("created_at", { ascending: false });
+        const [catRes, prodRes] = await Promise.all([
+          api.get('/categories'),
+          api.get('/products')
+        ]);
 
-        if (catData) setCategories(catData);
-        if (prodData) setFeaturedProducts(prodData as Product[]);
+        if (catRes.data) {
+          setCategories(catRes.data.slice(0, 6));
+        }
+
+        if (prodRes.data) {
+          const sorted = prodRes.data.sort((a: Product, b: Product) =>
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+          ).slice(0, 4);
+          setFeaturedProducts(sorted);
+        }
       } catch (err) {
         console.error("Error fetching landing page data:", err);
       } finally {
@@ -167,7 +165,7 @@ export default function LandingPage() {
                 Produk terbaru yang baru saja ditambahkan ke koleksi kami.
               </p>
             </div>
-            
+
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
               {loading ? (
                 Array(4).fill(0).map((_, i) => (
@@ -197,7 +195,7 @@ export default function LandingPage() {
                     <p className="text-primary font-black text-xl mb-4">
                       Rp {product.price.toLocaleString('id-ID')}
                     </p>
-                    <Link 
+                    <Link
                       to={`/product/${product.id}`}
                       className="block w-full py-3 bg-surface-container border border-primary/10 text-primary text-center font-bold rounded-lg hover:bg-primary hover:text-white transition-all text-sm uppercase tracking-wider"
                     >
@@ -207,23 +205,6 @@ export default function LandingPage() {
                 </div>
               ))}
             </div>
-          </div>
-        </section>
-
-        {/*  Flash Sale Section (Simplified/Static for now) */}
-        <section className="py-16 px-8">
-          <div className="max-w-7xl mx-auto bg-white rounded-3xl overflow-hidden shadow-2xl shadow-secondary-container/5">
-             <div className="p-8 md:p-12 text-center">
-                <h2 className="text-3xl font-black italic tracking-tighter text-secondary-container mb-4 uppercase">
-                   Nexus Ecosystem
-                </h2>
-                <p className="text-on-surface-variant mb-8 max-w-2xl mx-auto">
-                   Explore our handpicked selections across different categories. All data is fetched live from Supabase.
-                </p>
-                <div className="flex justify-center gap-4">
-                   <Link to="/categories" className="bg-primary text-on-primary px-8 py-4 rounded-xl font-bold">Explore All Kategori</Link>
-                </div>
-             </div>
           </div>
         </section>
 

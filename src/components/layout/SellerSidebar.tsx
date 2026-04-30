@@ -1,5 +1,5 @@
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { supabase } from '../../lib/supabase';
+import { Link, useLocation } from 'react-router-dom';
+import { useUser } from '../../contexts/UserContext';
 import type { Profile } from '../../types';
 
 interface Props {
@@ -17,11 +17,10 @@ const navLinks = [
 
 export default function SellerSidebar({ profile }: Props) {
   const location = useLocation();
-  const navigate = useNavigate();
+  const { logout } = useUser();
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    navigate('/login-page');
+    await logout();
   };
 
   return (

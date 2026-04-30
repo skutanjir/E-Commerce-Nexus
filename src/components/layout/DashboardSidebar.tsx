@@ -1,93 +1,112 @@
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { supabase } from '../../lib/supabase';
+import { Link, useLocation } from 'react-router-dom';
+import { useUser } from '../../contexts/UserContext';
 import type { Profile } from '../../types';
 
-interface Props {
+interface DashboardSidebarProps {
   profile: Profile | null;
 }
 
-const navLinks = [
-  { to: '/user-dashboard', label: 'Ringkasan', icon: 'dashboard' },
-  { to: '/user-dashboard-orders', label: 'Pesanan', icon: 'shopping_bag' },
-  { to: '/user-dashboard-wishlist', label: 'Wishlist', icon: 'favorite' },
-  { to: '/user-dashboard-profile', label: 'Profil', icon: 'person' },
-  { to: '/user-dashboard-addresses', label: 'Alamat', icon: 'location_on' },
-];
+const getAvatarSrc = (url: string | undefined | null) => {
+  if (!url) return undefined;
+  if (url.startsWith('http')) return url;
 
-export default function DashboardSidebar({ profile }: Props) {
+  // Ambil Base URL Backend dari env untuk gambar profile upload
+  const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
+  return `${baseUrl}${url}`;
+};
+
+export default function DashboardSidebar({ profile }: DashboardSidebarProps) {
+  const { logout } = useUser();
   const location = useLocation();
-  const navigate = useNavigate();
+  const isSeller = profile?.role === 'seller';
+
+  const userLinks = [
+    { to: '/user-dashboard', label: 'Ringkasan', icon: 'dashboard' },
+    { to: '/user-dashboard-orders', label: 'Pesanan', icon: 'shopping_bag' },
+    { to: '/user-dashboard-chat', label: 'Chat', icon: 'chat' },
+    { to: '/user-dashboard-wishlist', label: 'Favorit', icon: 'favorite' },
+    { to: '/user-dashboard-profile', label: 'Profil', icon: 'person' },
+    { to: '/user-dashboard-addresses', label: 'Alamat', icon: 'location_on' },
+  ];
+
+  const sellerLinks = [
+    { to: '/admin-dashboard-overview', label: 'Ringkasan', icon: 'monitoring' },
+    { to: '/admin-dashboard-products', label: 'Produk', icon: 'inventory_2' },
+    { to: '/admin-dashboard-categories', label: 'Kategori', icon: 'category' },
+    { to: '/admin-dashboard-orders', label: 'Pesanan', icon: 'receipt_long' },
+    { to: '/profile', label: 'Profil', icon: 'person' },
+  ];
+
+  const links = isSeller ? sellerLinks : userLinks;
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    navigate('/login-page');
+    await logout();
   };
 
   return (
     <aside className="md:col-span-3 space-y-6">
-      <div className="bg-surface-container-lowest p-6 rounded-xl shadow-sm border border-outline-variant/10">
-        <div className="flex flex-col items-center text-center">
-          <div className="w-20 h-20 rounded-full overflow-hidden mb-4 ring-4 ring-primary-fixed">
+      <div className="bg-surface-container-lowest rounded-xl shadow-sm border border-outline-variant/10 p-6 sticky top-24">
+        {/* Profile Snapshot */}
+        <div className="flex flex-col items-center mb-8 text-center">
+          <div className="relative mb-3">
             {profile?.avatar_url ? (
-              <img src={profile.avatar_url} alt="Profil" className="w-full h-full object-cover" />
+              <img
+                src={getAvatarSrc(profile.avatar_url)}
+                alt="Profile"
+                className="w-20 h-20 rounded-full object-cover border-4 border-surface-container-low shadow-sm"
+              />
             ) : (
-              <div className="w-full h-full flex items-center justify-center bg-primary-container">
-                <span className="material-symbols-outlined text-4xl text-primary">person</span>
+              <div className="w-20 h-20 rounded-full bg-primary-container flex items-center justify-center border-4 border-surface-container-low">
+                <span className="material-symbols-outlined text-3xl text-primary">person</span>
               </div>
             )}
+            <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-green-500 border-2 border-white rounded-full flex items-center justify-center" title="Online">
+            </div>
           </div>
-          <h2 className="text-on-surface font-bold text-lg tracking-tight">
-            {profile?.full_name || 'Nexus User'}
-          </h2>
-          <p className="text-on-surface-variant text-sm uppercase tracking-wider font-bold">
-            {profile?.role === 'seller' ? 'Seller' : 'Gold Member'}
-          </p>
+          <h2 className="font-bold text-on-surface text-lg">{profile?.full_name || 'Pengguna'}</h2>
+          <span className="inline-block mt-1 px-3 py-1 bg-primary/10 text-primary text-xs font-bold uppercase tracking-wider rounded-full">
+            {profile?.role === 'seller' ? 'Seller' : (profile?.role || 'Member')}
+          </span>
         </div>
-        <nav className="mt-8 space-y-1">
-          {navLinks.map(link => {
+
+        {/* Navigation */}
+        <nav className="space-y-1">
+          {links.map((link) => {
             const isActive = location.pathname === link.to;
+
             return (
               <Link
                 key={link.to}
                 to={link.to}
-                className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
+                className={`flex items-center gap-3 px-4 py-3 rounded-lg font-medium transition-all ${
                   isActive
-                    ? 'bg-surface-container-low text-primary font-semibold'
-                    : 'text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface'
+                    ? 'bg-primary/10 text-primary'
+                    : 'text-on-surface-variant hover:bg-surface-container hover:text-on-surface'
                 }`}
               >
                 <span
-                  className="material-symbols-outlined"
+                  className="material-symbols-outlined text-[20px]"
                   style={isActive ? { fontVariationSettings: "'FILL' 1" } : undefined}
                 >
                   {link.icon}
                 </span>
-                <span className="text-sm">{link.label}</span>
+                {link.label}
               </Link>
-            );
+            )
           })}
         </nav>
-      </div>
 
-      <div className="bg-primary overflow-hidden rounded-xl p-6 relative">
-        <div className="relative z-10">
-          <h4 className="text-white font-bold mb-2">Nexus Plus</h4>
-          <p className="text-primary-fixed text-xs mb-4">Gratis ongkir tanpa batas ke seluruh Indonesia.</p>
-          <button className="bg-white text-primary px-4 py-2 rounded-lg text-xs font-bold hover:bg-primary-fixed transition-colors">
-            Upgrade Sekarang
+        {/* Logout */}
+        <div className="mt-8 pt-6 border-t border-outline-variant/10">
+          <button
+            onClick={handleLogout}
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-lg font-medium text-error hover:bg-error/10 transition-colors border border-error/20"
+          >
+            <span className="material-symbols-outlined text-[20px]">logout</span>
+            Keluar Akun
           </button>
         </div>
-        <div className="absolute -right-4 -bottom-4 opacity-20 transform rotate-12">
-          <span className="material-symbols-outlined text-8xl text-white">loyalty</span>
-        </div>
       </div>
-
-      <button
-        onClick={handleLogout}
-        className="w-full px-4 py-2.5 text-sm font-bold text-error border border-error/20 rounded-lg hover:bg-error/5 transition-all"
-      >
-        Logout
-      </button>
     </aside>
   );
 }

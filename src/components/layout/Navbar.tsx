@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { supabase } from '../../lib/supabase';
-import type { User } from '@supabase/supabase-js';
-import type { Category, Profile } from '../../types';
+import { api } from '../../lib/api';
+import { useUser } from '../../contexts/UserContext';
+import type { Category } from '../../types';
 
 function getCartCount(): number {
   const saved = localStorage.getItem("nexus_cart");
@@ -18,8 +18,8 @@ export default function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [cartCount, setCartCount] = useState(getCartCount);
   const [searchQuery, setSearchQuery] = useState("");
-  const [user, setUser] = useState<User | null>(null);
-  const [userProfile, setUserProfile] = useState<Profile | null>(null);
+
+  const { user, profile: userProfile, logout } = useUser();
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
@@ -34,30 +34,13 @@ export default function Navbar() {
   }
 
   useEffect(() => {
-    async function fetchProfile(userId: string) {
-      const { data } = await supabase.from('profiles').select('*').eq('id', userId).single();
-      if (data) setUserProfile(data as Profile);
-    }
-
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-      if (session?.user) fetchProfile(session.user.id);
-    });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-      if (session?.user) fetchProfile(session.user.id);
-      else setUserProfile(null);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  useEffect(() => {
     async function fetchCategories() {
-      const { data, error } = await supabase.from('categories').select('*').limit(10);
-      if (error) console.error('Failed to fetch categories:', error.message);
-      if (data) setCategories(data as Category[]);
+      try {
+        const { data } = await api.get('/categories');
+        if (data) setCategories(data.slice(0, 10)); // Limit to 10
+      } catch (error: any) {
+        console.error('Failed to fetch categories:', error.message);
+      }
     }
     fetchCategories();
   }, []);
@@ -98,7 +81,7 @@ export default function Navbar() {
   };
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    await logout();
     setIsUserMenuOpen(false);
     navigate('/');
   };

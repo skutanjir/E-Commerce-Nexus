@@ -73,10 +73,10 @@ export default function AdminDashboardFixedLayout() {
         <header className="flex justify-between items-center mb-10">
           <div>
             <h1 className="text-3xl font-extrabold tracking-tight text-on-surface">
-              Dashboard Overview
+              Ringkasan Dashboard
             </h1>
             <p className="text-on-surface-variant text-base mt-1">
-              Welcome back, here's what's happening with your store today.
+              Selamat datang kembali, berikut ringkasan toko Anda hari ini.
             </p>
           </div>
           <div className="flex gap-3">
@@ -84,13 +84,13 @@ export default function AdminDashboardFixedLayout() {
               <span className="material-symbols-outlined text-[20px]">
                 calendar_today
               </span>
-              Last 30 Days
+              30 Hari Terakhir
             </button>
             <button className="bg-primary px-6 py-2.5 rounded-xl text-sm font-bold text-on-primary flex items-center gap-2 hover:opacity-90 transition-all shadow-lg shadow-primary/20">
               <span className="material-symbols-outlined text-[20px]">
                 download
               </span>
-              Export Data
+              Ekspor Data
             </button>
           </div>
         </header>
@@ -107,7 +107,7 @@ export default function AdminDashboardFixedLayout() {
               </span>
             </div>
             <p className="text-xs font-bold text-on-surface-variant uppercase tracking-widest">
-              Total Revenue
+              Total Pendapatan
             </p>
             <h3 className="text-2xl font-black text-on-surface mt-2">
               Rp 1.254.000.000
@@ -124,7 +124,7 @@ export default function AdminDashboardFixedLayout() {
               </span>
             </div>
             <p className="text-xs font-bold text-on-surface-variant uppercase tracking-widest">
-              Total Orders
+              Total Pesanan
             </p>
             <h3 className="text-2xl font-black text-on-surface mt-2">45,821</h3>
           </div>
@@ -139,7 +139,7 @@ export default function AdminDashboardFixedLayout() {
               </span>
             </div>
             <p className="text-xs font-bold text-on-surface-variant uppercase tracking-widest">
-              Active Products
+              Produk Aktif
             </p>
             <h3 className="text-2xl font-black text-on-surface mt-2">1,204</h3>
           </div>
@@ -154,7 +154,7 @@ export default function AdminDashboardFixedLayout() {
               </span>
             </div>
             <p className="text-xs font-bold text-on-surface-variant uppercase tracking-widest">
-              Total Users
+              Total Pengguna
             </p>
             <h3 className="text-2xl font-black text-on-surface mt-2">
               128,402
@@ -172,7 +172,7 @@ export default function AdminDashboardFixedLayout() {
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 rounded-full bg-primary"></div>
                 <span className="text-xs text-on-surface-variant font-bold">
-                  Revenue
+                  Pendapatan
                 </span>
               </div>
             </div>
@@ -332,12 +332,12 @@ export default function AdminDashboardFixedLayout() {
             <table className="w-full text-left">
               <thead>
                 <tr className="text-on-surface-variant text-[11px] font-bold uppercase tracking-widest border-b border-outline-variant">
-                  <th className="px-8 py-5">Order ID</th>
-                  <th className="px-8 py-5">Customer</th>
+                  <th className="px-8 py-5">ID Pesanan</th>
+                  <th className="px-8 py-5">Pelanggan</th>
                   <th className="px-8 py-5">Produk</th>
                   <th className="px-8 py-5">Harga</th>
                   <th className="px-8 py-5">Status</th>
-                  <th className="px-8 py-5 text-right">Actions</th>
+                  <th className="px-8 py-5 text-right">Aksi</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-outline-variant">
@@ -361,7 +361,7 @@ export default function AdminDashboardFixedLayout() {
                   </td>
                   <td className="px-8 py-5">
                     <span className="bg-emerald-50 text-emerald-700 text-[10px] font-black px-3 py-1.5 rounded-full border border-emerald-100 uppercase tracking-wide">
-                      Completed
+                       Selesai
                     </span>
                   </td>
                   <td className="px-8 py-5 text-right">
@@ -388,7 +388,7 @@ export default function AdminDashboardFixedLayout() {
                   <td className="px-8 py-5 text-sm font-black">Rp 5.200.000</td>
                   <td className="px-8 py-5">
                     <span className="bg-blue-50 text-blue-700 text-[10px] font-black px-3 py-1.5 rounded-full border border-blue-100 uppercase tracking-wide">
-                      Processing
+                       Diproses
                     </span>
                   </td>
                   <td className="px-8 py-5 text-right">
@@ -415,7 +415,7 @@ export default function AdminDashboardFixedLayout() {
                   <td className="px-8 py-5 text-sm font-black">Rp 1.450.000</td>
                   <td className="px-8 py-5">
                     <span className="bg-amber-50 text-amber-700 text-[10px] font-black px-3 py-1.5 rounded-full border border-amber-100 uppercase tracking-wide">
-                      Pending
+                       Menunggu
                     </span>
                   </td>
                   <td className="px-8 py-5 text-right">
@@ -444,7 +444,7 @@ export default function AdminDashboardFixedLayout() {
                   </td>
                   <td className="px-8 py-5">
                     <span className="bg-emerald-50 text-emerald-700 text-[10px] font-black px-3 py-1.5 rounded-full border border-emerald-100 uppercase tracking-wide">
-                      Completed
+                       Selesai
                     </span>
                   </td>
                   <td className="px-8 py-5 text-right">

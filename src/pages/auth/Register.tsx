@@ -1,9 +1,11 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useState } from "react";
-import { supabase } from "../../lib/supabase";
+import { api, setAccessToken } from "../../lib/api";
+import { useUser } from "../../contexts/UserContext";
 
 export default function RegisterPage() {
   const navigate = useNavigate();
+  const { refreshProfile } = useUser();
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
@@ -27,26 +29,18 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
-      const { data, error: signUpError } = await supabase.auth.signUp({
+      const res = await api.post('/auth/register', {
         email: formData.email,
         password: formData.password,
-        options: {
-          data: {
-            full_name: formData.fullName,
-            phone: formData.phone,
-            role: formData.role
-          }
-        }
+        full_name: formData.fullName,
+        phone: formData.phone,
+        role: formData.role,
       });
 
-      if (signUpError) throw signUpError;
-
-      if (data.user) {
-        alert("Pendaftaran berhasil! Silakan cek email Anda untuk verifikasi.");
-        navigate("/login-page");
-      }
+      // Registrasi berhasil, redirect ke halaman login
+      navigate('/login-page');
     } catch (err: any) {
-      setError(err.message || "Terjadi kesalahan saat mendaftar");
+      setError(err.response?.data?.error || err.message || 'Terjadi kesalahan saat mendaftar');
     } finally {
       setLoading(false);
     }
@@ -78,9 +72,7 @@ export default function RegisterPage() {
 
             <form className="space-y-6" onSubmit={handleSubmit}>
               <div className="space-y-2">
-                <label className="block text-sm font-semibold text-on-surface">
-                  Nama Lengkap
-                </label>
+                <label className="block text-sm font-semibold text-on-surface">Nama Lengkap</label>
                 <div className="relative group">
                   <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline group-focus-within:text-primary transition-colors">
                     person
@@ -99,9 +91,7 @@ export default function RegisterPage() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <label className="block text-sm font-semibold text-on-surface">
-                    Email
-                  </label>
+                  <label className="block text-sm font-semibold text-on-surface">Email</label>
                   <div className="relative group">
                     <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline group-focus-within:text-primary transition-colors">
                       mail
@@ -118,9 +108,7 @@ export default function RegisterPage() {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <label className="block text-sm font-semibold text-on-surface">
-                    Nomor HP
-                  </label>
+                  <label className="block text-sm font-semibold text-on-surface">Nomor HP</label>
                   <div className="relative group">
                     <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline group-focus-within:text-primary transition-colors">
                       smartphone
@@ -139,9 +127,7 @@ export default function RegisterPage() {
               </div>
 
               <div className="space-y-2">
-                <label className="block text-sm font-semibold text-on-surface">
-                  Role
-                </label>
+                <label className="block text-sm font-semibold text-on-surface">Role</label>
                 <div className="flex p-1 bg-surface-container-low rounded-lg w-full max-w-[300px]">
                   <button
                     className={`flex-1 py-2 text-sm font-medium rounded-md transition-colors ${
@@ -170,9 +156,7 @@ export default function RegisterPage() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <label className="block text-sm font-semibold text-on-surface">
-                    Kata Sandi
-                  </label>
+                  <label className="block text-sm font-semibold text-on-surface">Kata Sandi</label>
                   <div className="relative group">
                     <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline group-focus-within:text-primary transition-colors">
                       lock
@@ -189,9 +173,7 @@ export default function RegisterPage() {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <label className="block text-sm font-semibold text-on-surface">
-                    Konfirmasi Kata Sandi
-                  </label>
+                  <label className="block text-sm font-semibold text-on-surface">Konfirmasi Kata Sandi</label>
                   <div className="relative group">
                     <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline group-focus-within:text-primary transition-colors">
                       verified_user
@@ -233,7 +215,6 @@ export default function RegisterPage() {
         </div>
       </main>
 
-      {/*  Background Decoration for Premium Feel  */}
       <div className="fixed top-0 left-0 w-full h-full -z-10 overflow-hidden pointer-events-none">
         <div className="absolute -top-1/4 -right-1/4 w-1/2 h-1/2 bg-primary/5 rounded-full blur-[120px]"></div>
         <div className="absolute -bottom-1/4 -left-1/4 w-1/2 h-1/2 bg-secondary-container/5 rounded-full blur-[120px]"></div>

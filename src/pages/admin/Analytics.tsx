@@ -1,8 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { supabase } from '../../lib/supabase';
-import type { Profile } from '../../types';
-import SellerSidebar from '../../components/layout/SellerSidebar';
+import { api } from '../../lib/api';
 
 interface Stats {
   totalRevenue: number;
@@ -23,8 +20,6 @@ interface TopProduct {
 }
 
 export default function AdminReportsAnalytics() {
-  const navigate = useNavigate();
-  const [profile, setProfile] = useState<Profile | null>(null);
   const [stats, setStats] = useState<Stats>({
     totalRevenue: 0, totalOrders: 0, totalProducts: 0, totalUsers: 0,
     pendingOrders: 0, shippedOrders: 0, deliveredOrders: 0, cancelledOrders: 0,
@@ -36,46 +31,38 @@ export default function AdminReportsAnalytics() {
     async function fetchData() {
       try {
         setLoading(true);
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) { navigate('/login-page'); return; }
-
-        const { data: profileData } = await supabase.from('profiles').select('*').eq('id', user.id).single();
-        if (profileData?.role !== 'seller') { navigate('/user-dashboard'); return; }
-        setProfile(profileData as Profile);
-
-        const [
-          { data: orders },
-          { count: productCount },
-          { count: userCount },
-        ] = await Promise.all([
-          supabase.from('orders').select('status, total_amount, order_items(quantity, price_at_purchase, product:products(name, image_url))'),
-          supabase.from('products').select('*', { count: 'exact', head: true }),
-          supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'user'),
+        // We'll fetch orders, stats payload, and product count
+        const [statsRes, ordersRes] = await Promise.all([
+          api.get('/orders/admin/stats'),
+          api.get('/orders/admin')
         ]);
 
+        const statsData = statsRes.data;
+        const orders = ordersRes.data;
+
         if (orders) {
-          const totalRevenue = orders.filter(o => o.status !== 'cancelled').reduce((s, o) => s + Number(o.total_amount), 0);
+          const totalRevenue = orders.filter((o: any) => o.status !== 'cancelled').reduce((s: number, o: any) => s + Number(o.total_amount), 0);
           setStats({
             totalRevenue,
             totalOrders: orders.length,
-            totalProducts: productCount || 0,
-            totalUsers: userCount || 0,
-            pendingOrders: orders.filter(o => o.status === 'pending').length,
-            shippedOrders: orders.filter(o => o.status === 'shipped').length,
-            deliveredOrders: orders.filter(o => o.status === 'delivered' || o.status === 'completed').length,
-            cancelledOrders: orders.filter(o => o.status === 'cancelled').length,
+            totalProducts: statsData.productCount || 0,
+            totalUsers: statsData.customerCount || 0,
+            pendingOrders: orders.filter((o: any) => o.status === 'pending').length,
+            shippedOrders: orders.filter((o: any) => o.status === 'shipped').length,
+            deliveredOrders: orders.filter((o: any) => o.status === 'delivered' || o.status === 'completed').length,
+            cancelledOrders: orders.filter((o: any) => o.status === 'cancelled').length,
           });
 
           const productMap: Record<string, TopProduct> = {};
-          orders.forEach(order => {
-            (order.order_items as any[])?.forEach((item: any) => {
+          orders.forEach((order: any) => {
+            (order.order_items || []).forEach((item: any) => {
               const name = item.product?.name;
               if (!name) return;
               if (!productMap[name]) {
                 productMap[name] = { name, total_sold: 0, revenue: 0, image_url: item.product?.image_url };
               }
               productMap[name].total_sold += item.quantity;
-              productMap[name].revenue += item.quantity * item.price_at_purchase;
+              productMap[name].revenue += item.quantity * Number(item.price_at_purchase);
             });
           });
           const sorted = Object.values(productMap).sort((a, b) => b.revenue - a.revenue).slice(0, 5);
@@ -88,7 +75,7 @@ export default function AdminReportsAnalytics() {
       }
     }
     fetchData();
-  }, [navigate]);
+  }, []);
 
   if (loading) {
     return (
@@ -106,11 +93,8 @@ export default function AdminReportsAnalytics() {
   ];
 
   return (
-    <div className="flex min-h-screen">
-      <SellerSidebar profile={profile} />
-
-      <main className="flex-1 ml-72 bg-surface-container-lowest p-8">
-        <header className="mb-8">
+    <div className="bg-surface-container-lowest min-h-screen p-8">
+      <header className="mb-8">
           <h1 className="text-3xl font-extrabold tracking-tight text-on-surface">Laporan & Analitik</h1>
           <p className="text-on-surface-variant mt-1 text-sm">Ringkasan performa toko secara real-time.</p>
         </header>
@@ -202,7 +186,6 @@ export default function AdminReportsAnalytics() {
             </div>
           </div>
         </div>
-      </main>
-    </div>
+      </div>
   );
 }

@@ -1,8 +1,6 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { supabase } from "../../lib/supabase";
-import type { Product, Profile } from "../../types";
-import SellerSidebar from "../../components/layout/SellerSidebar";
+import { api } from "../../lib/api";
+import type { Product } from "../../types";
 
 interface Promo {
   id: string;
@@ -14,8 +12,6 @@ interface Promo {
 }
 
 export default function AdminDiscounts() {
-  const navigate = useNavigate();
-  const [profile, setProfile] = useState<Profile | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [promos, setPromos] = useState<Promo[]>([]);
   const [loading, setLoading] = useState(true);
@@ -27,14 +23,10 @@ export default function AdminDiscounts() {
     async function load() {
       try {
         setLoading(true);
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) { navigate("/login-page"); return; }
-        const { data: profileData } = await supabase.from("profiles").select("*").eq("id", user.id).single();
-        if (profileData?.role !== "seller") { navigate("/user-dashboard"); return; }
-        setProfile(profileData as Profile);
-
-        const { data: prodData } = await supabase.from("products").select("*").order("name");
-        if (prodData) setProducts(prodData as Product[]);
+        const { data } = await api.get('/products');
+        if (data) setProducts(data);
+      } catch (err) {
+        console.error(err);
       } finally {
         setLoading(false);
       }
@@ -43,7 +35,7 @@ export default function AdminDiscounts() {
     const saved = localStorage.getItem("nexus_promos");
     if (saved) setPromos(JSON.parse(saved));
     load();
-  }, [navigate]);
+  }, []);
 
   const savePromos = (list: Promo[]) => {
     setPromos(list);
@@ -85,12 +77,9 @@ export default function AdminDiscounts() {
   }
 
   return (
-    <div className="flex min-h-screen">
-      <SellerSidebar profile={profile} />
-
-      <main className="flex-1 ml-72 bg-surface-container-lowest p-8">
-        {/* Header */}
-        <header className="flex justify-between items-end mb-10">
+    <div className="bg-surface-container-lowest min-h-screen p-8">
+      {/* Header */}
+      <header className="flex justify-between items-end mb-10">
           <div>
             <h1 className="text-3xl font-extrabold tracking-tight text-on-surface">Diskon & Promo</h1>
             <p className="text-on-surface-variant text-sm mt-1">Buat dan kelola kampanye diskon untuk produk Anda.</p>
@@ -182,7 +171,7 @@ export default function AdminDiscounts() {
                           className="w-4 h-4 rounded border-outline-variant text-primary focus:ring-primary/20"
                         />
                         <span className="text-sm font-medium text-on-surface">{p.name}</span>
-                        <span className="ml-auto text-xs font-bold text-primary">Rp {p.price.toLocaleString('id-ID')}</span>
+                        <span className="ml-auto text-xs font-bold text-primary">Rp {Number(p.price).toLocaleString('id-ID')}</span>
                       </label>
                     ))}
                   </div>
@@ -258,7 +247,6 @@ export default function AdminDiscounts() {
             })}
           </div>
         )}
-      </main>
-    </div>
+      </div>
   );
 }

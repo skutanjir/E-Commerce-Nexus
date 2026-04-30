@@ -1,14 +1,10 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { supabase } from '../../lib/supabase';
-import type { Profile, Product, Category } from '../../types';
-import SellerSidebar from '../../components/layout/SellerSidebar';
+import { api } from '../../lib/api';
+import type { Product, Category } from '../../types';
 
 const EMPTY_FORM = { name: '', description: '', price: '', stock: '', category_id: '', image_url: '' };
 
 export default function AdminProductManagement() {
-  const navigate = useNavigate();
-  const [profile, setProfile] = useState<Profile | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
@@ -22,20 +18,12 @@ export default function AdminProductManagement() {
     async function fetchData() {
       try {
         setLoading(true);
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) { navigate('/login-page'); return; }
-
-        const { data: profileData } = await supabase.from('profiles').select('*').eq('id', user.id).single();
-        if (profileData?.role !== 'seller') { navigate('/user-dashboard'); return; }
-        setProfile(profileData as Profile);
-
-        const [{ data: prodData }, { data: catData }] = await Promise.all([
-          supabase.from('products').select('*, category:categories(name)').order('created_at', { ascending: false }),
-          supabase.from('categories').select('*').order('name'),
+        const [prodRes, catRes] = await Promise.all([
+          api.get('/products'),
+          api.get('/categories'),
         ]);
-
-        if (prodData) setProducts(prodData as Product[]);
-        if (catData) setCategories(catData as Category[]);
+        if (prodRes.data) setProducts(prodRes.data);
+        if (catRes.data) setCategories(catRes.data);
       } catch (err) {
         console.error(err);
       } finally {
@@ -43,7 +31,7 @@ export default function AdminProductManagement() {
       }
     }
     fetchData();
-  }, [navigate]);
+  }, []);
 
   const filteredProducts = products.filter(p =>
     p.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -67,11 +55,17 @@ export default function AdminProductManagement() {
       setSaving(true);
       const payload = { name: form.name, description: form.description, price: Number(form.price), stock: Number(form.stock), category_id: form.category_id || null, image_url: form.image_url || null };
       if (editId) {
-        const { error } = await supabase.from('products').update(payload).eq('id', editId);
-        if (!error) setProducts(prev => prev.map(p => p.id === editId ? { ...p, ...payload } : p));
+        const { data } = await api.put(`/products/${editId}`, payload);
+        const categoryMatch = categories.find(c => c.id === data.category_id);
+        const productWithCategory = { ...data, category: categoryMatch };
+
+        setProducts(prev => prev.map(p => p.id === editId ? productWithCategory : p));
       } else {
-        const { data, error } = await supabase.from('products').insert(payload).select('*, category:categories(name)').single();
-        if (!error && data) setProducts(prev => [data as Product, ...prev]);
+        const { data } = await api.post('/products', payload);
+        const categoryMatch = categories.find(c => c.id === data.category_id);
+        const productWithCategory = { ...data, category: categoryMatch };
+
+        setProducts(prev => [productWithCategory, ...prev]);
       }
       setShowForm(false);
     } catch (err) {
@@ -83,8 +77,12 @@ export default function AdminProductManagement() {
 
   const handleDelete = async (id: string) => {
     if (!confirm('Hapus produk ini?')) return;
-    const { error } = await supabase.from('products').delete().eq('id', id);
-    if (!error) setProducts(prev => prev.filter(p => p.id !== id));
+    try {
+      await api.delete(`/products/${id}`);
+      setProducts(prev => prev.filter(p => p.id !== id));
+    } catch (error) {
+      console.error(error);
+    }
   };
 
   if (loading) {
@@ -96,11 +94,8 @@ export default function AdminProductManagement() {
   }
 
   return (
-    <div className="flex min-h-screen">
-      <SellerSidebar profile={profile} />
-
-      <main className="flex-1 ml-72 bg-surface-container-lowest p-8">
-        <header className="flex items-center justify-between mb-8">
+    <div className="bg-surface-container-lowest min-h-screen p-8">
+      <header className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-3xl font-extrabold tracking-tight text-on-surface">Manajemen Produk</h1>
             <p className="text-on-surface-variant mt-1 text-sm">Kelola inventori, harga, dan listing produk.</p>
@@ -242,7 +237,7 @@ export default function AdminProductManagement() {
                         {product.category?.name || '—'}
                       </td>
                       <td className="px-6 py-4 text-sm font-bold text-on-surface">
-                        Rp {product.price.toLocaleString('id-ID')}
+                        Rp {Number(product.price).toLocaleString('id-ID')}
                       </td>
                       <td className="px-6 py-4 text-sm">
                         <div className="flex items-center gap-2">
@@ -273,7 +268,6 @@ export default function AdminProductManagement() {
             </table>
           </div>
         </div>
-      </main>
-    </div>
+      </div>
   );
 }

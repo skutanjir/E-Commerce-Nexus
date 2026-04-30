@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { supabase } from '../../lib/supabase';
-import type { Profile, Order } from '../../types';
+import { api } from '../../lib/api';
+import { useUser } from '../../contexts/UserContext';
+import type { Order } from '../../types';
 import DashboardSidebar from '../../components/layout/DashboardSidebar';
+import DashboardNav from '../../components/layout/DashboardNav';
 
 type StatusFilter = 'all' | 'pending' | 'shipped' | 'delivered' | 'cancelled';
 
@@ -32,44 +34,27 @@ const STATUS_ICON: Record<string, string> = {
 
 export default function UserDashboardOrders() {
   const navigate = useNavigate();
-  const [profile, setProfile] = useState<Profile | null>(null);
+  const { user, profile, authLoading } = useUser();
   const [allOrders, setAllOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<StatusFilter>('all');
 
   useEffect(() => {
-    async function fetchData() {
+    if (authLoading) return;
+    if (!user) { navigate('/login-page'); return; }
+
+    async function fetchOrders() {
       try {
-        setLoading(true);
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) { navigate('/login-page'); return; }
-
-        const { data: profileData } = await supabase
-          .from('profiles').select('*').eq('id', user.id).single();
-        if (profileData) setProfile(profileData as Profile);
-
-        const { data: ordersData } = await supabase
-          .from('orders')
-          .select(`
-            *,
-            order_items (
-              quantity,
-              price_at_purchase,
-              product:products (name, image_url)
-            )
-          `)
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false });
-
-        if (ordersData) setAllOrders(ordersData as unknown as Order[]);
+        const { data } = await api.get('/orders');
+        if (data) setAllOrders(data);
       } catch (err) {
         console.error(err);
       } finally {
         setLoading(false);
       }
     }
-    fetchData();
-  }, [navigate]);
+    fetchOrders();
+  }, [authLoading, user, navigate]);
 
   const filteredOrders = activeTab === 'all'
     ? allOrders
@@ -83,37 +68,9 @@ export default function UserDashboardOrders() {
     { key: 'cancelled', label: 'Dibatalkan' },
   ];
 
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center h-screen bg-surface-container-lowest">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
-
   return (
     <>
-      <nav className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md fixed top-0 w-full z-50 border-b border-slate-200/10 shadow-sm">
-        <div className="flex items-center justify-between px-8 py-4 max-w-7xl mx-auto">
-          <Link to="/" className="text-2xl font-black tracking-tighter text-blue-600 dark:text-blue-500">NEXUS</Link>
-          <div className="hidden md:flex items-center space-x-8">
-            <Link className="text-slate-600 dark:text-slate-400 hover:text-blue-600 transition-colors" to="/">Beranda</Link>
-            <Link className="text-slate-600 dark:text-slate-400 hover:text-blue-600 transition-colors" to="/shop-catalogue">Toko</Link>
-            <Link className="text-slate-600 dark:text-slate-400 hover:text-blue-600 transition-colors" to="/categories">Kategori</Link>
-            <Link className="text-slate-600 dark:text-slate-400 hover:text-blue-600 transition-colors" to="/about-us">Tentang</Link>
-          </div>
-          <div className="flex items-center space-x-4">
-            <Link to="/shopping-cart" className="material-symbols-outlined text-slate-600 dark:text-slate-400 hover:text-blue-600 transition-colors p-2">shopping_cart</Link>
-            <div className="h-8 w-8 rounded-full overflow-hidden bg-primary-container flex items-center justify-center border-2 border-white flex-shrink-0">
-              {profile?.avatar_url ? (
-                <img src={profile.avatar_url} alt="Profil" className="w-full h-full object-cover" />
-              ) : (
-                <span className="material-symbols-outlined text-primary text-sm">person</span>
-              )}
-            </div>
-          </div>
-        </div>
-      </nav>
+      <DashboardNav profile={profile} />
 
       <main className="pt-24 pb-16 px-4 md:px-8 max-w-7xl mx-auto min-h-screen">
         <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
@@ -144,85 +101,105 @@ export default function UserDashboardOrders() {
                 ))}
               </div>
 
-              <div className="divide-y divide-outline-variant/10">
-                {filteredOrders.length === 0 ? (
-                  <div className="p-12 text-center text-on-surface-variant">
-                    <span className="material-symbols-outlined text-5xl mb-4 block opacity-30">receipt_long</span>
-                    <p className="mb-3">Belum ada pesanan di kategori ini.</p>
-                    <Link to="/shop-catalogue" className="text-primary font-bold hover:underline">Mulai Belanja</Link>
-                  </div>
-                ) : (
-                  filteredOrders.map(order => {
-                    const firstItem = order.order_items?.[0];
-                    return (
-                      <div key={order.id} className="p-6 hover:bg-surface-container-low transition-colors group">
-                        <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
-                          <div className="flex items-center gap-4">
-                            <span className="material-symbols-outlined text-primary">
-                              {STATUS_ICON[order.status] || 'receipt_long'}
-                            </span>
-                            <div>
-                              <p className="text-xs font-bold text-outline uppercase tracking-wider">Order ID</p>
-                              <p className="text-sm font-bold text-on-surface font-mono">#{order.id.slice(0, 8).toUpperCase()}</p>
+              {loading ? (
+                <div className="p-6 space-y-4">
+                  {[1, 2, 3].map(i => (
+                    <div key={i} className="h-32 bg-surface-container-low animate-pulse rounded-xl"></div>
+                  ))}
+                </div>
+              ) : (
+                <div className="divide-y divide-outline-variant/10">
+                  {filteredOrders.length === 0 ? (
+                    <div className="p-12 text-center text-on-surface-variant">
+                      <span className="material-symbols-outlined text-5xl mb-4 block opacity-30">receipt_long</span>
+                      <p className="mb-3">Belum ada pesanan di kategori ini.</p>
+                      <Link to="/shop-catalogue" className="text-primary font-bold hover:underline">Mulai Belanja</Link>
+                    </div>
+                  ) : (
+                    filteredOrders.map(order => {
+                      const firstItem = order.order_items?.[0];
+                      return (
+                        <div key={order.id} className="p-6 hover:bg-surface-container-low transition-colors group">
+                          <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
+                            <div className="flex items-center gap-4">
+                              <span className="material-symbols-outlined text-primary">
+                                {STATUS_ICON[order.status] || 'receipt_long'}
+                              </span>
+                              <div>
+                                <p className="text-xs font-bold text-outline uppercase tracking-wider">ID Pesanan</p>
+                                <p className="text-sm font-bold text-on-surface font-mono">#{order.id.slice(0, 8).toUpperCase()}</p>
+                              </div>
                             </div>
-                          </div>
-                          <div className="flex items-center gap-6">
-                            <div className="text-right hidden sm:block">
-                              <p className="text-xs font-bold text-outline uppercase tracking-wider">Tanggal</p>
-                              <p className="text-sm text-on-surface-variant">
-                                {new Date(order.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
-                              </p>
-                            </div>
-                            <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${STATUS_COLOR[order.status] || 'bg-slate-100 text-slate-700'}`}>
-                              {STATUS_LABEL[order.status] || order.status}
-                            </span>
-                          </div>
-                        </div>
-
-                        <div className="flex flex-col md:flex-row gap-6 items-start md:items-center">
-                          <div className="flex gap-4 flex-1">
-                            <div className="w-20 h-20 rounded-lg overflow-hidden bg-surface-container-low border border-outline-variant/10 flex-shrink-0 flex items-center justify-center">
-                              {firstItem?.product?.image_url ? (
-                                <img src={firstItem.product.image_url} alt={firstItem.product?.name} className="w-full h-full object-cover" />
-                              ) : (
-                                <span className="material-symbols-outlined text-outline">inventory_2</span>
-                              )}
-                            </div>
-                            <div className="flex flex-col justify-center">
-                              <h4 className="font-bold text-on-surface group-hover:text-primary transition-colors">
-                                {firstItem?.product?.name || 'Beberapa Produk'}
-                              </h4>
-                              {firstItem && (
+                            <div className="flex items-center gap-6">
+                              <div className="text-right hidden sm:block">
+                                <p className="text-xs font-bold text-outline uppercase tracking-wider">Tanggal</p>
                                 <p className="text-sm text-on-surface-variant">
-                                  {firstItem.quantity} Barang × Rp {firstItem.price_at_purchase.toLocaleString('id-ID')}
+                                  {new Date(order.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
                                 </p>
-                              )}
-                              {order.order_items && order.order_items.length > 1 && (
-                                <p className="text-xs text-outline mt-1">+{order.order_items.length - 1} produk lainnya</p>
-                              )}
+                              </div>
+                              <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${STATUS_COLOR[order.status] || 'bg-slate-100 text-slate-700'}`}>
+                                {STATUS_LABEL[order.status] || order.status}
+                              </span>
                             </div>
                           </div>
 
-                          <div className="flex flex-col items-end gap-2 flex-shrink-0">
-                            <span className="text-xs font-medium text-outline">Total Belanja</span>
-                            <p className="text-xl font-black text-on-surface">Rp {order.total_amount.toLocaleString('id-ID')}</p>
-                            <div className="flex gap-2 mt-1">
-                              {(order.status === 'delivered' || order.status === 'completed') && (
-                                <button className="bg-surface-container-high text-on-surface-variant px-4 py-2 rounded-lg text-sm font-bold hover:bg-surface-container-highest transition-all">
-                                  Beli Lagi
-                                </button>
-                              )}
-                              <button className="bg-gradient-to-r from-primary to-primary-container text-on-primary px-4 py-2 rounded-lg text-sm font-bold shadow-sm active:scale-95 transition-all">
-                                Lihat Detail
-                              </button>
+                          <div className="flex flex-col md:flex-row gap-6 items-start md:items-center">
+                            <div className="flex gap-4 flex-1">
+                              <div className="w-20 h-20 rounded-lg overflow-hidden bg-surface-container-low border border-outline-variant/10 flex-shrink-0 flex items-center justify-center">
+                                {firstItem?.product?.image_url ? (
+                                  <img src={firstItem.product.image_url} alt={firstItem.product?.name} className="w-full h-full object-cover" />
+                                ) : (
+                                  <span className="material-symbols-outlined text-outline">inventory_2</span>
+                                )}
+                              </div>
+                              <div className="flex flex-col justify-center">
+                                <h4 className="font-bold text-on-surface group-hover:text-primary transition-colors">
+                                  {firstItem?.product?.name || 'Beberapa Produk'}
+                                </h4>
+                                {firstItem && (
+                                  <p className="text-sm text-on-surface-variant">
+                                    {firstItem.quantity} Barang × Rp {Number(firstItem.price_at_purchase).toLocaleString('id-ID')}
+                                  </p>
+                                )}
+                                {order.order_items && order.order_items.length > 1 && (
+                                  <p className="text-xs text-outline mt-1">+{order.order_items.length - 1} produk lainnya</p>
+                                )}
+                              </div>
+                            </div>
+
+                            <div className="flex flex-col items-end gap-2 flex-shrink-0">
+                              <span className="text-xs font-medium text-outline">Total Belanja</span>
+                              <p className="text-xl font-black text-on-surface">Rp {Number(order.total_amount).toLocaleString('id-ID')}</p>
+                              <div className="flex gap-2 mt-1 flex-wrap">
+                                {(order.status === 'delivered' || order.status === 'completed') && (
+                                  <button className="bg-surface-container-high text-on-surface-variant px-4 py-2 rounded-lg text-sm font-bold hover:bg-surface-container-highest transition-all">
+                                    Beli Lagi
+                                  </button>
+                                )}
+                                {(order.status === 'pending' || order.status === 'shipped') && (
+                                  <Link
+                                    to={`/lacak-pesanan?id=${order.id}`}
+                                    className="bg-blue-50 text-blue-700 border border-blue-200 px-4 py-2 rounded-lg text-sm font-bold hover:bg-blue-100 transition-all flex items-center gap-1"
+                                  >
+                                    <span className="material-symbols-outlined text-sm">track_changes</span>
+                                    Lacak
+                                  </Link>
+                                )}
+                                <Link
+                                  to={`/user-dashboard-orders/${order.id}`}
+                                  className="bg-gradient-to-r from-primary to-primary-container text-on-primary px-4 py-2 rounded-lg text-sm font-bold shadow-sm active:scale-95 transition-all"
+                                >
+                                  Lihat Detail
+                                </Link>
+                              </div>
                             </div>
                           </div>
                         </div>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
+                      );
+                    })
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>

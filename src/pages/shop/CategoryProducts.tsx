@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import Navbar from "../../components/layout/Navbar";
 import Footer from "../../components/layout/Footer";
-import { supabase } from "../../lib/supabase";
+import { api } from "../../lib/api";
 
 import type { Product, Category } from "../../types";
 
@@ -17,26 +17,27 @@ export default function CategoryProductsPage() {
     async function fetchCategoryData() {
       try {
         setLoading(true);
-        // 1. Fetch Category Details
-        const { data: catData, error: catError } = await supabase
-          .from("categories")
-          .select("*")
-          .eq("slug", slug)
-          .single();
+        // We'll fetch all categories and filter by slug since our current API
+        // may not have a get category by slug endpoint. Alternatively, fetch all and filter.
+        const [catRes, prodRes] = await Promise.all([
+          api.get('/categories'),
+          api.get('/products')
+        ]);
 
-        if (catError) throw catError;
-        setCategory(catData);
+        const targetCat = catRes.data?.find((c: Category) => c.slug === slug);
 
-        // 2. Fetch Products for this Category
-        const { data: prodData, error: prodError } = await supabase
-          .from("products")
-          .select("*")
-          .eq("category_id", catData.id);
+        if (!targetCat) {
+          throw new Error("Category not found");
+        }
 
-        if (prodError) throw prodError;
-        setProducts(prodData || []);
-      } catch (err) {
-        setError((err as Error).message);
+        setCategory(targetCat);
+
+        // Filter products that belong to this category
+        const catProducts = prodRes.data?.filter((p: Product) => p.category_id === targetCat.id) || [];
+        setProducts(catProducts);
+
+      } catch (err: any) {
+        setError(err.message || "Failed to load");
       } finally {
         setLoading(false);
       }
@@ -53,13 +54,13 @@ export default function CategoryProductsPage() {
       <main className="pt-32 pb-20 px-8 max-w-7xl mx-auto min-h-screen">
         <nav className="flex items-center gap-2 text-sm text-on-surface-variant mb-8 font-label">
           <Link className="hover:text-primary transition-colors" to="/">
-            Home
+            Beranda
           </Link>
           <span className="material-symbols-outlined text-xs">
             chevron_right
           </span>
           <Link className="hover:text-primary transition-colors" to="/categories">
-            Categories
+            Kategori
           </Link>
           <span className="material-symbols-outlined text-xs">
             chevron_right
@@ -73,14 +74,14 @@ export default function CategoryProductsPage() {
           </div>
         ) : error ? (
           <div className="p-8 bg-error/10 text-error rounded-xl text-center">
-            Category not found or failed to load.
+            Kategori tidak ditemukan atau gagal dimuat.
           </div>
         ) : (
           <div>
             <div className="mb-12">
               <h1 className="text-4xl font-bold mb-4 capitalize">{category?.name}</h1>
               <p className="text-on-surface-variant max-w-2xl">
-                {category?.description || `Explore our high-quality collection of ${category?.name}.`}
+                {category?.description || `Jelajahi koleksi ${category?.name} berkualitas tinggi kami.`}
               </p>
             </div>
 
@@ -89,14 +90,14 @@ export default function CategoryProductsPage() {
                 <span className="material-symbols-outlined text-6xl text-outline mb-4">
                   inventory_2
                 </span>
-                <p className="text-on-surface-variant">No products found in this category yet.</p>
+                <p className="text-on-surface-variant">Belum ada produk di kategori ini.</p>
               </div>
             ) : (
               <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
                 {products.map((product) => (
                   <Link
                     key={product.id}
-                    to={`/product/${product.id}`} 
+                    to={`/product/${product.id}`}
                     className="group flex flex-col bg-surface-container-lowest rounded-xl overflow-hidden border border-outline-variant/10 hover:shadow-xl transition-all duration-300"
                   >
                     <div className="aspect-square overflow-hidden bg-surface-container-low">
@@ -111,7 +112,7 @@ export default function CategoryProductsPage() {
                         {product.name}
                       </h3>
                       <p className="text-primary font-black text-xl">
-                        Rp {product.price.toLocaleString()}
+                        Rp {Number(product.price).toLocaleString()}
                       </p>
                       <button
                         onClick={e => {
@@ -123,10 +124,11 @@ export default function CategoryProductsPage() {
                             cart.push({ id: product.id, name: product.name, price: product.price, image_url: product.image_url, quantity: 1 });
                           }
                           localStorage.setItem("nexus_cart", JSON.stringify(cart));
+                          window.dispatchEvent(new Event("nexus:cart-updated"));
                         }}
                         className="w-full mt-4 py-2 border border-primary text-primary font-bold rounded-lg hover:bg-primary hover:text-white transition-all"
                       >
-                        Add to Cart
+                        Tambah ke Keranjang
                       </button>
                     </div>
                   </Link>

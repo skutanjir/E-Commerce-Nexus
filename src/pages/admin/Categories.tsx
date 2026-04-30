@@ -1,14 +1,10 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { supabase } from '../../lib/supabase';
-import type { Profile, Category } from '../../types';
-import SellerSidebar from '../../components/layout/SellerSidebar';
+import { api } from '../../lib/api';
+import type { Category } from '../../types';
 
 const EMPTY_FORM = { name: '', slug: '', icon: '', description: '' };
 
 export default function AdminCategoryManagement() {
-  const navigate = useNavigate();
-  const [profile, setProfile] = useState<Profile | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -20,15 +16,8 @@ export default function AdminCategoryManagement() {
     async function fetchData() {
       try {
         setLoading(true);
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) { navigate('/login-page'); return; }
-
-        const { data: profileData } = await supabase.from('profiles').select('*').eq('id', user.id).single();
-        if (profileData?.role !== 'seller') { navigate('/user-dashboard'); return; }
-        setProfile(profileData as Profile);
-
-        const { data: catData } = await supabase.from('categories').select('*').order('name');
-        if (catData) setCategories(catData as Category[]);
+        const { data } = await api.get('/categories');
+        if (data) setCategories(data);
       } catch (err) {
         console.error(err);
       } finally {
@@ -36,7 +25,7 @@ export default function AdminCategoryManagement() {
       }
     }
     fetchData();
-  }, [navigate]);
+  }, []);
 
   const toSlug = (name: string) =>
     name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
@@ -52,13 +41,13 @@ export default function AdminCategoryManagement() {
     if (!form.name) return;
     try {
       setSaving(true);
-      const payload = { name: form.name, slug: form.slug || toSlug(form.name), icon: form.icon || null, description: form.description || null };
+      const payload = { name: form.name, slug: form.slug || toSlug(form.name), icon: form.icon || undefined, description: form.description || undefined };
       if (editId) {
-        const { error } = await supabase.from('categories').update(payload).eq('id', editId);
-        if (!error) setCategories(prev => prev.map(c => c.id === editId ? { ...c, ...payload } : c));
+        const { data } = await api.put(`/categories/${editId}`, payload);
+        if (data) setCategories(prev => prev.map(c => c.id === editId ? data : c));
       } else {
-        const { data, error } = await supabase.from('categories').insert(payload).select().single();
-        if (!error && data) setCategories(prev => [...prev, data as Category].sort((a, b) => a.name.localeCompare(b.name)));
+        const { data } = await api.post('/categories', payload);
+        if (data) setCategories(prev => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)));
       }
       setShowForm(false);
     } catch (err) {
@@ -70,8 +59,12 @@ export default function AdminCategoryManagement() {
 
   const handleDelete = async (id: string) => {
     if (!confirm('Hapus kategori ini? Produk terkait mungkin terpengaruh.')) return;
-    const { error } = await supabase.from('categories').delete().eq('id', id);
-    if (!error) setCategories(prev => prev.filter(c => c.id !== id));
+    try {
+      await api.delete(`/categories/${id}`);
+      setCategories(prev => prev.filter(c => c.id !== id));
+    } catch (error) {
+      console.error(error);
+    }
   };
 
   if (loading) {
@@ -83,11 +76,8 @@ export default function AdminCategoryManagement() {
   }
 
   return (
-    <div className="flex min-h-screen">
-      <SellerSidebar profile={profile} />
-
-      <main className="flex-1 ml-72 bg-surface-container-lowest p-8">
-        <header className="flex items-center justify-between mb-8">
+    <div className="bg-surface-container-lowest min-h-screen p-8">
+      <header className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-3xl font-extrabold tracking-tight text-on-surface">Manajemen Kategori</h1>
             <p className="text-on-surface-variant mt-1 text-sm">Kelola kategori produk toko Anda.</p>
@@ -172,7 +162,6 @@ export default function AdminCategoryManagement() {
             ))
           )}
         </div>
-      </main>
-    </div>
+      </div>
   );
 }
