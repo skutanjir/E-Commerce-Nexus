@@ -233,11 +233,13 @@ export default function ShopCatalogue() {
                       className="group bg-surface-container-lowest rounded-lg overflow-hidden flex flex-col shadow-[0_4px_20px_rgb(0,0,0,0.04)] hover:shadow-[0_12px_40px_rgba(0,74,198,0.1)] transition-all duration-500 relative"
                     >
                       <Link to={`/product/${product.id}`} className="relative aspect-square overflow-hidden bg-surface-container-low block">
-                        <img
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                          src={product.image_url || "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&auto=format&fit=crop&q=60"}
-                          alt={product.name}
-                        />
+                        {product.image_url ? (
+        <img className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" src={product.image_url} alt={product.name} />
+      ) : (
+        <div className="w-full h-full flex items-center justify-center bg-surface-container-low text-outline">
+          <span className="material-symbols-outlined text-4xl">inventory_2</span>
+        </div>
+      )}
                         <button
                           onClick={e => { e.preventDefault(); addToCart(product); }}
                           className="absolute bottom-2 right-2 bg-primary text-white p-2 rounded-full shadow-lg opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 transition-all duration-300"
@@ -255,14 +257,18 @@ export default function ShopCatalogue() {
                           {product.name}
                         </h3>
                         <div className="flex items-center gap-0.5 mb-1.5">
-                          {[1,2,3,4,5].map(s => (
-                            <span key={s} className="material-symbols-outlined text-xs text-amber-400" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
-                          ))}
-                          <span className="text-[10px] text-on-surface-variant ml-1">5.0</span>
-                        </div>
+        {(product as any).reviews && (product as any).reviews.length > 0 ? (
+          <>
+            <span className="material-symbols-outlined text-sm text-amber-400" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
+            <span className="text-[10px] text-on-surface-variant ml-1">{((product as any).reviews.reduce((acc: number, r: any) => acc + r.rating, 0) / (product as any).reviews.length).toFixed(1)}</span>
+          </>
+        ) : (
+          <span className="text-[10px] font-bold text-outline">Belum ada rating</span>
+        )}
+      </div>
                         <div className="mt-auto">
                           <p className="text-sm font-black text-primary tracking-tighter">
-                            Rp {product.price.toLocaleString('id-ID')}
+                            Rp {Number(product.price).toLocaleString('id-ID')}
                           </p>
                         </div>
                       </div>

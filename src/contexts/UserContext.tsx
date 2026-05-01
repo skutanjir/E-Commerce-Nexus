@@ -52,14 +52,29 @@ export function UserProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
-    // Rely on the axios interceptor to handle the /auth/refresh process deduplication automatically.
-    // If we don't have a valid token, interceptor will catch the 401 and refresh it exactly once.
-    loadMe().finally(() => setAuthLoading(false));
+    const initSession = async () => {
+      try {
+        // Karena endpoint /auth/me menggunakan optionalAuthenticate (return 200 tanpa error),
+        // interceptor 401 tidak akan terpanggil otomatis saat loadMe() dijalankan tanpa token.
+        // Maka kita paksa call /auth/refresh di awal mount untuk memancing cookie 7 hari.
+        const res = await api.post('/auth/refresh');
+        if (res.data.accessToken) {
+          setAccessToken(res.data.accessToken);
+        }
+      } catch (err) {
+        // Jika gagal (cookie mati/expired), biarkan, nanti loadMe akan return null
+      }
+      
+      await loadMe();
+      setAuthLoading(false);
+    };
+
+    initSession();
   }, []);
 
   return (
     <UserContext.Provider value={{ user, profile, authLoading, refreshProfile, logout }}>
-      {children}
+      {!authLoading && children}
     </UserContext.Provider>
   );
 }

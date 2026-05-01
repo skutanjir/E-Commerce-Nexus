@@ -1,8 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { io, Socket } from 'socket.io-client';
 import { api } from '../../lib/api';
 import { useUser } from '../../contexts/UserContext';
 import type { Category } from '../../types';
+
+const SOCKET_URL = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
 
 function getCartCount(): number {
   const saved = localStorage.getItem("nexus_cart");
@@ -17,11 +20,14 @@ export default function Navbar() {
   const [isCategoryOpen, setIsCategoryOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [cartCount, setCartCount] = useState(getCartCount);
+  const [animateCart, setAnimateCart] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [hasUnreadNotification, setHasUnreadNotification] = useState(false);
 
   const { user, profile: userProfile, logout } = useUser();
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
+  const socketRef = useRef<Socket | null>(null);
   const location = useLocation();
   const navigate = useNavigate();
   const [prevPathname, setPrevPathname] = useState(location.pathname);
@@ -32,6 +38,34 @@ export default function Navbar() {
     if (isCategoryOpen) setIsCategoryOpen(false);
     if (isUserMenuOpen) setIsUserMenuOpen(false);
   }
+
+  // Socket.io for Real-time Bell Notifications
+  useEffect(() => {
+    if (!user) return;
+    
+    // Initial fetch for unread status
+    api.get('/chat/unread-count').then((res) => {
+      if (res.data.unread_count > 0) setHasUnreadNotification(true);
+    }).catch(() => {});
+
+    const socket = io(SOCKET_URL, { reconnectionAttempts: 3, reconnectionDelayMax: 10000, timeout: 5000,
+      path: '/socket.io/',
+      transports: ['websocket', 'polling']
+    });
+    socketRef.current = socket;
+
+    socket.on('connect', () => {
+      socket.emit('join_user', user.userId);
+    });
+
+    socket.on('new_notification', () => {
+      setHasUnreadNotification(true);
+    });
+
+    return () => {
+      if (socketRef.current) socketRef.current.disconnect();
+    };
+  }, [user]);
 
   useEffect(() => {
     async function fetchCategories() {
@@ -46,14 +80,21 @@ export default function Navbar() {
   }, []);
 
   useEffect(() => {
-    const syncCart = () => setCartCount(getCartCount());
+    const syncCart = () => {
+      const newCount = getCartCount();
+      if (newCount > cartCount) {
+        setAnimateCart(true);
+        setTimeout(() => setAnimateCart(false), 400);
+      }
+      setCartCount(newCount);
+    };
     window.addEventListener("storage", syncCart);
     window.addEventListener("nexus:cart-updated", syncCart);
     return () => {
       window.removeEventListener("storage", syncCart);
       window.removeEventListener("nexus:cart-updated", syncCart);
     };
-  }, []);
+  }, [cartCount]);
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 20);
@@ -87,6 +128,7 @@ export default function Navbar() {
   };
 
   const dashboardLink = userProfile?.role === 'seller' ? '/admin-dashboard-overview' : '/user-dashboard';
+  const chatLink = userProfile?.role === 'seller' ? '/admin-dashboard-chat' : '/user-dashboard-chat';
 
   return (
     <header
@@ -166,11 +208,25 @@ export default function Navbar() {
             <Link to="/shopping-cart" className="p-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-all relative">
               <span className="material-symbols-outlined">shopping_cart</span>
               {cartCount > 0 && (
-                <span className="absolute top-1 right-1 w-4 h-4 bg-blue-600 text-white text-[10px] flex items-center justify-center rounded-full font-bold">
+                <span className={`absolute top-1 right-1 w-4 h-4 bg-blue-600 text-white text-[10px] flex items-center justify-center rounded-full font-bold transition-transform ${animateCart ? 'scale-150 ring-4 ring-blue-600/30' : 'scale-100'}`}>
                   {cartCount > 99 ? '99+' : cartCount}
                 </span>
               )}
             </Link>
+
+            {/* Notification Bell */}
+            {user && (
+              <Link 
+                to={chatLink} 
+                onClick={() => setHasUnreadNotification(false)}
+                className="p-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-all relative hidden sm:flex"
+              >
+                <span className="material-symbols-outlined">notifications</span>
+                {hasUnreadNotification && (
+                  <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white dark:border-slate-900 animate-pulse"></span>
+                )}
+              </Link>
+            )}
 
             <div className="hidden sm:block h-6 w-[1px] bg-slate-200 dark:bg-slate-700 mx-1"></div>
 
@@ -180,7 +236,7 @@ export default function Navbar() {
                   onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
                   className="flex items-center gap-2 px-3 py-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-all"
                 >
-                  <div className="w-8 h-8 rounded-full overflow-hidden bg-primary-container flex items-center justify-center border-2 border-blue-100 flex-shrink-0">
+                  <div className="w-8 h-8 rounded-full overflow-hidden bg-primary-container flex items-center justify-center border-2 border-blue-100 flex-shrink-0 relative">
                     {userProfile?.avatar_url ? (
                       <img src={userProfile.avatar_url} alt="Profil" className="w-full h-full object-cover" />
                     ) : (
@@ -232,9 +288,12 @@ export default function Navbar() {
 
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="md:hidden p-2 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              className="md:hidden p-2 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors relative"
             >
               <span className="material-symbols-outlined">{isMenuOpen ? 'close' : 'menu'}</span>
+              {user && hasUnreadNotification && !isMenuOpen && (
+                <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white dark:border-slate-900 animate-pulse"></span>
+              )}
             </button>
           </div>
         </div>
@@ -281,6 +340,17 @@ export default function Navbar() {
             </div>
 
             <Link className="block text-lg font-bold text-slate-800 dark:text-white" to="/about-us">Tentang Kami</Link>
+            
+            {user && (
+              <Link 
+                className="flex items-center justify-between text-lg font-bold text-slate-800 dark:text-white" 
+                to={chatLink}
+                onClick={() => { setHasUnreadNotification(false); setIsMenuOpen(false); }}
+              >
+                Notifikasi
+                {hasUnreadNotification && <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse mr-2"></span>}
+              </Link>
+            )}
           </div>
 
           <div className="pt-6 border-t border-slate-100 dark:border-slate-800 space-y-4">
@@ -310,7 +380,7 @@ export default function Navbar() {
                     <p className="text-xs text-slate-500">{userProfile?.email || user.email}</p>
                   </div>
                 </div>
-                <Link to={dashboardLink} className="flex items-center justify-center py-3 px-4 bg-blue-600 text-white rounded-xl text-sm font-bold">
+                <Link to={dashboardLink} onClick={() => setIsMenuOpen(false)} className="flex items-center justify-center py-3 px-4 bg-blue-600 text-white rounded-xl text-sm font-bold">
                   Dashboard
                 </Link>
                 <button

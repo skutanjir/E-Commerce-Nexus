@@ -1,9 +1,11 @@
+import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useUser } from '../../contexts/UserContext';
+import { api } from '../../lib/api';
 import type { Profile } from '../../types';
 
 interface Props {
-  profile: Profile | null;
+  profile?: Profile | null;
 }
 
 const navLinks = [
@@ -18,6 +20,23 @@ const navLinks = [
 export default function SellerSidebar({ profile }: Props) {
   const location = useLocation();
   const { logout } = useUser();
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    async function fetchUnread() {
+      try {
+        const { data } = await api.get('/chat/unread-count');
+        setUnreadCount(data.unread_count || 0);
+      } catch (err) {
+        // ignore
+      }
+    }
+    fetchUnread();
+    
+    // Poll every 30 seconds for unread updates (simplified realtime)
+    const interval = setInterval(fetchUnread, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleLogout = async () => {
     await logout();
@@ -53,6 +72,28 @@ export default function SellerSidebar({ profile }: Props) {
             </Link>
           );
         })}
+        <Link
+          key="/admin-dashboard-chat"
+          to="/admin-dashboard-chat"
+          className={`flex items-center justify-between px-4 py-3 rounded-lg transition-all ${
+            location.pathname.includes('/admin-dashboard-chat')
+              ? 'bg-primary/5 text-primary font-semibold'
+              : 'hover:bg-surface-container-low hover:text-primary'
+          }`}
+        >
+          <div className="flex items-center gap-3">
+            <span
+              className="material-symbols-outlined"
+              style={location.pathname.includes('/admin-dashboard-chat') ? { fontVariationSettings: "'FILL' 1" } : undefined}
+            >
+              chat
+            </span>
+            <span className="text-sm">Pesan Pelanggan</span>
+          </div>
+          {unreadCount > 0 && (
+            <span className="w-2 h-2 rounded-full bg-error animate-pulse"></span>
+          )}
+        </Link>
       </nav>
 
       <div className="p-4 mt-auto">

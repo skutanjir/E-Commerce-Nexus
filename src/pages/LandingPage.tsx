@@ -4,8 +4,11 @@ import Footer from "../components/layout/Footer";
 import { Link } from "react-router-dom";
 import { api } from "../lib/api";
 import type { Product, Category } from "../types";
+import { usePopup } from "../contexts/PopupContext";
 
 export default function LandingPage() {
+  const { toast } = usePopup();
+
   const [categories, setCategories] = useState<Category[]>([]);
   const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -193,7 +196,7 @@ export default function LandingPage() {
                       {product.name}
                     </h3>
                     <p className="text-primary font-black text-xl mb-4">
-                      Rp {product.price.toLocaleString('id-ID')}
+                      Rp {Number(product.price).toLocaleString('id-ID')}
                     </p>
                     <Link
                       to={`/product/${product.id}`}
@@ -225,7 +228,7 @@ export default function LandingPage() {
                 Dapatkan diskon hingga 90% untuk seluruh koleksi. Hanya tersedia
                 selama persediaan masih ada.
               </p>
-              <button className="bg-white text-primary px-10 py-4 rounded-full font-black uppercase tracking-widest hover:scale-105 transition-transform shadow-2xl shadow-white/20">
+              <button onClick={() => toast("Voucher MEGA11 berhasil diklaim, cek di halaman cart Anda!", "success")} className="bg-white text-primary px-10 py-4 rounded-full font-black uppercase tracking-widest hover:scale-105 transition-transform shadow-2xl shadow-white/20">
                 Ambil Voucher Sekarang
               </button>
             </div>

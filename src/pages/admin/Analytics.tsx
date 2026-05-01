@@ -158,7 +158,7 @@ export default function AdminReportsAnalytics() {
                       <p className="text-xs text-on-surface-variant">{product.total_sold} terjual</p>
                     </div>
                     <p className="text-sm font-black text-primary flex-shrink-0">
-                      Rp {product.revenue.toLocaleString('id-ID')}
+                      Rp {Number(product.revenue).toLocaleString('id-ID')}
                     </p>
                   </div>
                 ))}

@@ -1,3 +1,4 @@
+import { usePopup } from '../../contexts/PopupContext';
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Navbar from "../../components/layout/Navbar";
@@ -46,6 +47,7 @@ const PAYMENT_METHODS = [
 ];
 
 export default function CheckoutFlow() {
+  const { toast, confirm: confirmAction } = usePopup();
   const navigate = useNavigate();
   const { user } = useUser();
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
@@ -165,17 +167,17 @@ export default function CheckoutFlow() {
   const handlePayment = async () => {
     if (useNewAddress) {
       if (!form.fullName || !form.phone || !form.address || !form.city || !form.postalCode) {
-        alert("Mohon lengkapi semua data pengiriman terlebih dahulu.");
+        toast("Mohon lengkapi semua data pengiriman terlebih dahulu.", 'error');
         return;
       }
     } else {
       if (!selectedAddressId && savedAddresses.length === 0) {
-        alert("Tambahkan alamat pengiriman terlebih dahulu di dashboard.");
+        toast("Tambahkan alamat pengiriman terlebih dahulu di dashboard.", 'error');
         return;
       }
     }
     if (cartItems.length === 0) {
-      alert("Keranjang belanja kosong.");
+      toast("Keranjang belanja kosong.", 'error');
       return;
     }
 
@@ -183,7 +185,7 @@ export default function CheckoutFlow() {
     let snapLaunched = false;
     try {
       if (!user) {
-        alert("Sesi login habis. Silakan login ulang.");
+        toast("Sesi login habis. Silakan login ulang.", 'error');
         navigate("/login-page");
         return;
       }
@@ -192,7 +194,11 @@ export default function CheckoutFlow() {
       const orderPayload = {
         total_amount: total,
         shipping_address: `${form.fullName} | ${form.phone} | ${form.address}, ${form.city} ${form.postalCode}`,
-        items: cartItems
+        items: cartItems.map(item => ({
+          product_id: item.id,
+          quantity: item.quantity,
+          price_at_purchase: item.price
+        }))
       };
 
       const res = await api.post('/orders', orderPayload);
@@ -212,7 +218,7 @@ export default function CheckoutFlow() {
       }
 
       if (!window.snap) {
-        alert("Sistem pembayaran belum siap. Refresh halaman lalu coba lagi.");
+        toast("Sistem pembayaran belum siap. Refresh halaman lalu coba lagi.");
         setLoading(false);
         return;
       }
@@ -314,7 +320,7 @@ export default function CheckoutFlow() {
       console.error("Gagal memproses pembayaran:", err);
       const msg = err.response?.data?.error || err.message || "Terjadi kesalahan.";
       if (msg.includes("Sesi") || msg.toLowerCase().includes("unauthorized")) {
-        alert("Sesi login habis. Silakan login ulang.");
+        toast("Sesi login habis. Silakan login ulang.", 'error');
         navigate("/login-page");
         return;
       }
@@ -559,7 +565,7 @@ export default function CheckoutFlow() {
                       </div>
                     </div>
                     <span className={`font-black ${selectedShipping.id === opt.id ? "text-primary" : "text-on-surface"}`}>
-                      Rp {opt.price.toLocaleString("id-ID")}
+                      Rp {Number(opt.price).toLocaleString("id-ID")}
                     </span>
                     {selectedShipping.id === opt.id && (
                       <div className="absolute top-2 right-2">
@@ -631,7 +637,7 @@ export default function CheckoutFlow() {
                 </div>
                 <div className="flex justify-between items-center text-on-surface-variant">
                   <span className="text-sm">Ongkos Kirim ({selectedShipping.name})</span>
-                  <span className="text-sm font-medium">Rp {selectedShipping.price.toLocaleString("id-ID")}</span>
+                  <span className="text-sm font-medium">Rp {Number(selectedShipping.price).toLocaleString("id-ID")}</span>
                 </div>
               </div>
               <div className="pt-6 space-y-6">

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { api } from "../../lib/api";
+import { usePopup } from "../../contexts/PopupContext";
 import type { Product } from "../../types";
 
 interface Promo {
@@ -12,6 +13,7 @@ interface Promo {
 }
 
 export default function AdminDiscounts() {
+  const { toast, confirm: confirmAction } = usePopup();
   const [products, setProducts] = useState<Product[]>([]);
   const [promos, setPromos] = useState<Promo[]>([]);
   const [loading, setLoading] = useState(true);
@@ -54,12 +56,17 @@ export default function AdminDiscounts() {
       products: form.products,
     };
     savePromos([promo, ...promos]);
-    setForm({ name: "", discount: "", start: "", end: "", products: [] });
-    setShowForm(false);
-    setSaving(false);
+      setForm({ name: "", discount: "", start: "", end: "", products: [] });
+      setShowForm(false);
+      setSaving(false);
+      toast('Promo berhasil dibuat.', 'success');
   };
 
-  const deletePromo = (id: string) => savePromos(promos.filter(p => p.id !== id));
+  const deletePromo = async (id: string) => {
+    if (!(await confirmAction('Hapus promo ini?'))) return;
+    savePromos(promos.filter(p => p.id !== id));
+    toast('Promo berhasil dihapus.', 'success');
+  };
 
   const toggleProduct = (id: string) => {
     setForm(f => ({

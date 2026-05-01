@@ -1,3 +1,4 @@
+import { usePopup } from '../../contexts/PopupContext';
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../../lib/api';
@@ -33,11 +34,20 @@ const STATUS_ICON: Record<string, string> = {
 };
 
 export default function UserDashboardOrders() {
+  const { toast, confirm: confirmAction } = usePopup();
   const navigate = useNavigate();
   const { user, profile, authLoading } = useUser();
   const [allOrders, setAllOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<StatusFilter>('all');
+
+  // Review Modal State
+  const [showReview, setShowReview] = useState(false);
+  const [reviewProduct, setReviewProduct] = useState<any>(null);
+  const [rating, setRating] = useState(5);
+  const [comment, setComment] = useState('');
+  const [isAnonymous, setIsAnonymous] = useState(false);
+  const [submittingReview, setSubmittingReview] = useState(false);
 
   useEffect(() => {
     if (authLoading) return;
@@ -67,6 +77,32 @@ export default function UserDashboardOrders() {
     { key: 'delivered', label: 'Selesai' },
     { key: 'cancelled', label: 'Dibatalkan' },
   ];
+
+  const handleOpenReview = (product: any) => {
+    setReviewProduct(product);
+    setRating(5);
+    setComment('');
+    setIsAnonymous(false);
+    setShowReview(true);
+  };
+
+  const submitReview = async () => {
+    if (!reviewProduct) return;
+    setSubmittingReview(true);
+    try {
+      await api.post(`/products/${reviewProduct.id}/reviews`, {
+        rating,
+        comment,
+        is_anonymous: isAnonymous
+      });
+      toast('Terima kasih! Ulasan Anda berhasil dikirim.', 'success');
+      setShowReview(false);
+    } catch (err: any) {
+      toast(err.response?.data?.error || 'Gagal mengirim ulasan.', 'error');
+    } finally {
+      setSubmittingReview(false);
+    }
+  };
 
   return (
     <>
@@ -171,15 +207,57 @@ export default function UserDashboardOrders() {
                               <span className="text-xs font-medium text-outline">Total Belanja</span>
                               <p className="text-xl font-black text-on-surface">Rp {Number(order.total_amount).toLocaleString('id-ID')}</p>
                               <div className="flex gap-2 mt-1 flex-wrap">
-                                {(order.status === 'delivered' || order.status === 'completed') && (
-                                  <button className="bg-surface-container-high text-on-surface-variant px-4 py-2 rounded-lg text-sm font-bold hover:bg-surface-container-highest transition-all">
-                                    Beli Lagi
+                                {order.status === 'delivered' && (
+                                  <button
+                                    onClick={async () => {
+                                      try {
+                                        await api.put(`/orders/${order.id}/status`, { status: 'completed' });
+                                        setAllOrders(prev => prev.map(o => o.id === order.id ? { ...o, status: 'completed' } : o));
+                                        toast('Pesanan telah diselesaikan!', 'success');
+                                      } catch (err) {
+                                        console.error(err);
+                                        toast('Gagal menyelesaikan pesanan.', 'error');
+                                      }
+                                    }}
+                                    className="flex items-center gap-1 bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-green-700 transition-all shadow-sm active:scale-95"
+                                  >
+                                    <span className="material-symbols-outlined text-sm">check_circle</span>
+                                    Pesanan Diterima
                                   </button>
+                                )}
+                                {order.status === 'completed' && (
+                                  <>
+                                    {!firstItem?.is_reviewed && (
+                                      <button 
+                                        onClick={() => handleOpenReview(firstItem?.product)}
+                                        className="bg-amber-100 text-amber-700 border border-amber-200 px-4 py-2 rounded-lg text-sm font-bold hover:bg-amber-200 transition-all flex items-center gap-1 shadow-sm active:scale-95"
+                                      >
+                                        <span className="material-symbols-outlined text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
+                                        Beri Rating
+                                      </button>
+                                    )}
+                                    <button 
+                                      onClick={() => {
+                                        if (firstItem?.product) {
+                                          navigate(`/product/${firstItem.product.id}`);
+                                        }
+                                      }}
+                                      disabled={!firstItem?.product}
+                                      className={`px-4 py-2 rounded-lg text-sm font-bold transition-all shadow-sm active:scale-95 flex items-center gap-1 ${
+                                        firstItem?.product 
+                                        ? 'bg-surface-container-high text-on-surface-variant border border-outline-variant/30 hover:bg-surface-container-highest' 
+                                        : 'bg-surface-container text-outline opacity-50 cursor-not-allowed border border-outline-variant/10'
+                                      }`}
+                                    >
+                                      <span className="material-symbols-outlined text-sm">shopping_cart</span>
+                                      Beli Lagi
+                                    </button>
+                                  </>
                                 )}
                                 {(order.status === 'pending' || order.status === 'shipped') && (
                                   <Link
                                     to={`/lacak-pesanan?id=${order.id}`}
-                                    className="bg-blue-50 text-blue-700 border border-blue-200 px-4 py-2 rounded-lg text-sm font-bold hover:bg-blue-100 transition-all flex items-center gap-1"
+                                    className="bg-blue-50 text-blue-700 border border-blue-200 px-4 py-2 rounded-lg text-sm font-bold hover:bg-blue-100 transition-all flex items-center gap-1 shadow-sm active:scale-95"
                                   >
                                     <span className="material-symbols-outlined text-sm">track_changes</span>
                                     Lacak
@@ -189,7 +267,7 @@ export default function UserDashboardOrders() {
                                   to={`/user-dashboard-orders/${order.id}`}
                                   className="bg-gradient-to-r from-primary to-primary-container text-on-primary px-4 py-2 rounded-lg text-sm font-bold shadow-sm active:scale-95 transition-all"
                                 >
-                                  Lihat Detail
+                                  Detail
                                 </Link>
                               </div>
                             </div>
@@ -203,6 +281,74 @@ export default function UserDashboardOrders() {
             </div>
           </div>
         </div>
+
+        {/* Modal Beri Ulasan */}
+        {showReview && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+            <div className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-md p-6 shadow-2xl">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-lg font-black text-on-surface">Beri Ulasan Produk</h3>
+                <button onClick={() => setShowReview(false)} className="text-on-surface-variant hover:text-error">
+                  <span className="material-symbols-outlined">close</span>
+                </button>
+              </div>
+              
+              <div className="flex items-center gap-4 mb-6">
+                {reviewProduct?.image_url ? (
+                  <img src={reviewProduct.image_url} alt="" className="w-12 h-12 rounded-lg object-cover bg-slate-100" />
+                ) : (
+                  <div className="w-12 h-12 rounded-lg bg-surface-container-low flex items-center justify-center">
+                    <span className="material-symbols-outlined text-outline">inventory_2</span>
+                  </div>
+                )}
+                <p className="font-bold text-sm text-on-surface line-clamp-2">{reviewProduct?.name || 'Produk'}</p>
+              </div>
+
+              <div className="mb-6 flex justify-center gap-2">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button key={star} onClick={() => setRating(star)}>
+                    <span 
+                      className={`material-symbols-outlined text-4xl transition-colors ${rating >= star ? 'text-amber-400' : 'text-slate-300'}`}
+                      style={{ fontVariationSettings: `'FILL' ${rating >= star ? 1 : 0}` }}
+                    >
+                      star
+                    </span>
+                  </button>
+                ))}
+              </div>
+
+              <div className="mb-4">
+                <textarea
+                  value={comment}
+                  onChange={(e) => setComment(e.target.value)}
+                  placeholder="Ceritakan kepuasan Anda terhadap produk ini..."
+                  className="w-full border border-outline-variant/20 rounded-xl p-4 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary min-h-[100px] resize-none"
+                />
+              </div>
+
+              <div className="flex items-center gap-2 mb-6">
+                <input
+                  type="checkbox"
+                  id="anonymous"
+                  checked={isAnonymous}
+                  onChange={(e) => setIsAnonymous(e.target.checked)}
+                  className="w-4 h-4 text-primary rounded border-slate-300 focus:ring-primary"
+                />
+                <label htmlFor="anonymous" className="text-sm text-on-surface-variant cursor-pointer">
+                  Sembunyikan nama saya (Anonim)
+                </label>
+              </div>
+
+              <button
+                onClick={submitReview}
+                disabled={submittingReview}
+                className="w-full bg-primary text-white py-3 rounded-xl font-bold hover:opacity-90 disabled:opacity-50 transition-all"
+              >
+                {submittingReview ? 'Mengirim...' : 'Kirim Ulasan'}
+              </button>
+            </div>
+          </div>
+        )}
       </main>
     </>
   );

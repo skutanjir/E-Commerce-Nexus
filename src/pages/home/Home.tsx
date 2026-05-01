@@ -3,11 +3,14 @@ import Navbar from "../../components/layout/Navbar";
 import Footer from "../../components/layout/Footer";
 import { Link } from "react-router-dom";
 import { api } from "../../lib/api";
+import { usePopup } from "../../contexts/PopupContext";
 import { useUser } from "../../contexts/UserContext";
 
 import type { Product, Category } from "../../types";
 
 export default function Home() {
+  const { toast } = usePopup();
+
   const { user, profile: userProfile } = useUser();
   const [categories, setCategories] = useState<Category[]>([]);
   const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
@@ -193,26 +196,34 @@ export default function Home() {
               ) : featuredProducts.map((product) => (
                 <div key={product.id} className="bg-surface-container-lowest rounded-2xl overflow-hidden hover:shadow-2xl transition-all duration-300 group">
                   <div className="relative aspect-[4/5] overflow-hidden">
-                    <img
-                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                      src={product.image_url || "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&auto=format&fit=crop&q=60"}
-                      alt={product.name}
-                    />
+                    {product.image_url ? (
+        <img className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" src={product.image_url} alt={product.name} />
+      ) : (
+        <div className="w-full h-full flex items-center justify-center bg-surface-container-low text-outline">
+          <span className="material-symbols-outlined text-4xl">inventory_2</span>
+        </div>
+      )}
                     <button className="absolute top-4 right-4 p-2 bg-white/80 backdrop-blur rounded-full shadow-sm text-on-surface-variant hover:text-error transition-colors">
                       <span className="material-symbols-outlined text-lg">favorite</span>
                     </button>
                   </div>
                   <div className="p-6">
                     <div className="flex items-center gap-1 mb-2">
-                      <span className="material-symbols-outlined text-sm text-amber-400" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
-                      <span className="text-xs font-bold text-on-surface">5.0</span>
+        {(product as any).reviews && (product as any).reviews.length > 0 ? (
+          <>
+            <span className="material-symbols-outlined text-sm text-amber-400" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
+            <span className="text-xs font-bold text-on-surface">{((product as any).reviews.reduce((acc: number, r: any) => acc + r.rating, 0) / (product as any).reviews.length).toFixed(1)}</span>
+          </>
+        ) : (
+          <span className="text-[10px] font-bold text-outline uppercase tracking-wider">Belum ada rating</span>
+        )}
                       <span className="text-[10px] text-on-surface-variant ml-2 uppercase tracking-widest">{product.category?.name}</span>
                     </div>
                     <h3 className="font-bold text-on-surface mb-2 line-clamp-1">
                       {product.name}
                     </h3>
                     <p className="text-primary font-black text-xl mb-4">
-                      Rp {product.price.toLocaleString('id-ID')}
+                      Rp {Number(product.price).toLocaleString('id-ID')}
                     </p>
                     <Link
                       to={`/product/${product.id}`}
@@ -244,7 +255,7 @@ export default function Home() {
                 Dapatkan diskon hingga 90% untuk seluruh koleksi. Hanya tersedia
                 selama persediaan masih ada.
               </p>
-              <button className="bg-white text-primary px-10 py-4 rounded-full font-black uppercase tracking-widest hover:scale-105 transition-transform shadow-2xl shadow-white/20">
+              <button onClick={() => toast("Voucher MEGA11 berhasil diklaim, cek di halaman cart Anda!", "success")} className="bg-white text-primary px-10 py-4 rounded-full font-black uppercase tracking-widest hover:scale-105 transition-transform shadow-2xl shadow-white/20">
                 Ambil Voucher Sekarang
               </button>
             </div>

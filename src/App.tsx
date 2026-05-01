@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { UserProvider } from './contexts/UserContext';
+import { PopupProvider } from './contexts/PopupContext';
 import About from './pages/info/About';
 import PrivacyPolicy from './pages/info/PrivacyPolicy';
 import TermsOfService from './pages/info/TermsOfService';
@@ -31,14 +32,16 @@ import Addresses from './pages/dashboard/Addresses';
 import Orders from './pages/dashboard/Orders';
 import OrderDetail from './pages/dashboard/OrderDetail';
 import ChatPage from './pages/dashboard/Chat';
+import SellerChatPage from './pages/admin/Chat';
 import Profile from './pages/dashboard/Profile';
 import Wishlist from './pages/dashboard/Wishlist';
-
+import SellerDetail from './pages/shop/SellerDetail';
 
 export default function App() {
   return (
-    <UserProvider>
-    <BrowserRouter>
+    <PopupProvider>
+      <UserProvider>
+      <BrowserRouter>
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/about-us" element={<About />} />
@@ -58,6 +61,8 @@ export default function App() {
           <Route path="/admin-category-management" element={<CategoriesAdmin />} />
           <Route path="/admin-reports-analytics" element={<AnalyticsAdmin />} />
           <Route path="/admin-discounts" element={<DiscountsAdmin />} />
+          <Route path="/admin-dashboard-chat" element={<SellerChatPage />} />
+          <Route path="/admin-dashboard-chat/:contactId" element={<SellerChatPage />} />
         </Route>
 
         <Route path="/admin-dashboard-fixed-layout" element={<AdminLayout />} />
@@ -69,6 +74,7 @@ export default function App() {
         <Route path="/login-page" element={<Login />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
         <Route path="/product/:id" element={<ProductDetail />} />
+        <Route path="/seller/:id" element={<SellerDetail />} />
         <Route path="/register-page" element={<Register />} />
         <Route path="/shopping-cart" element={<Cart />} />
         <Route path="/shop-catalogue" element={<Catalogue />} />
@@ -77,11 +83,12 @@ export default function App() {
         <Route path="/user-dashboard-orders" element={<Orders />} />
         <Route path="/user-dashboard-orders/:id" element={<OrderDetail />} />
         <Route path="/user-dashboard-chat" element={<ChatPage />} />
-        <Route path="/user-dashboard-chat/:orderId" element={<ChatPage />} />
+        <Route path="/user-dashboard-chat/:contactId" element={<ChatPage />} />
         <Route path="/user-dashboard-profile" element={<Profile />} />
         <Route path="/user-dashboard-wishlist" element={<Wishlist />} />
       </Routes>
-    </BrowserRouter>
-    </UserProvider>
+      </BrowserRouter>
+      </UserProvider>
+    </PopupProvider>
   );
 }

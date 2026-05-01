@@ -2,6 +2,7 @@
 
 export interface AuthUser {
   id: string;
+  userId?: string;
   email: string;
   role: 'user' | 'seller';
 }
@@ -48,8 +49,13 @@ export interface Category {
   created_at?: string;
 }
 
+export interface CategoryWithCount extends Category {
+  product_count: number;
+}
+
 export interface Product {
   id: string;
+  seller_id?: string;
   level_id: string | null;
   category_id: string | null;
   name: string;
@@ -59,6 +65,7 @@ export interface Product {
   image_url: string | null;
   created_at: string;
   category?: Category;
+  reviews?: ProductReview[];
 }
 
 export interface Order {
@@ -91,6 +98,7 @@ export interface OrderItem {
   product_id: string;
   quantity: number;
   price_at_purchase: number;
+  is_reviewed?: boolean;
   product?: Product;
 }
 

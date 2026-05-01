@@ -1,3 +1,4 @@
+import { usePopup } from '../../contexts/PopupContext';
 import { useEffect, useState } from 'react';
 import { api } from '../../lib/api';
 import type { Category } from '../../types';
@@ -5,6 +6,7 @@ import type { Category } from '../../types';
 const EMPTY_FORM = { name: '', slug: '', icon: '', description: '' };
 
 export default function AdminCategoryManagement() {
+  const { toast, confirm: confirmAction } = usePopup();
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -58,7 +60,7 @@ export default function AdminCategoryManagement() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Hapus kategori ini? Produk terkait mungkin terpengaruh.')) return;
+    if (!(await confirmAction('Hapus kategori ini? Produk terkait mungkin terpengaruh.'))) return;
     try {
       await api.delete(`/categories/${id}`);
       setCategories(prev => prev.filter(c => c.id !== id));

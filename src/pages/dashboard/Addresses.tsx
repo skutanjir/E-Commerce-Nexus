@@ -1,3 +1,4 @@
+import { usePopup } from '../../contexts/PopupContext';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../../lib/api';
@@ -9,6 +10,7 @@ import DashboardNav from '../../components/layout/DashboardNav';
 const EMPTY_FORM = { label: '', full_name: '', phone: '', address_line: '', city: '', province: '', postal_code: '' };
 
 export default function UserDashboardAddresses() {
+  const { toast, confirm: confirmAction } = usePopup();
   const navigate = useNavigate();
   const { user, profile, authLoading } = useUser();
   const [addresses, setAddresses] = useState<Address[]>([]);
@@ -63,7 +65,7 @@ export default function UserDashboardAddresses() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Hapus alamat ini?')) return;
+    if (!(await confirmAction('Hapus alamat ini?'))) return;
     try {
       await api.delete(`/addresses/${id}`);
       setAddresses(prev => prev.filter(a => a.id !== id));

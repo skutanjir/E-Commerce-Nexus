@@ -1,3 +1,4 @@
+import { usePopup } from '../../contexts/PopupContext';
 import { useEffect, useRef, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { api } from '../../lib/api';
@@ -28,6 +29,7 @@ const STATUS_COLOR: Record<string, string> = {
 // Seller doesn't have an ID directly inside profile anymore if we depend on context, using user.id inside context if needed
 // Actually, let's grab it from the context
 function ChatPanel({ order, sellerId, onClose }: { order: Order; sellerId: string | null; onClose: () => void }) {
+  const { toast } = usePopup();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [text, setText] = useState('');
   const [sending, setSending] = useState(false);
@@ -50,7 +52,7 @@ function ChatPanel({ order, sellerId, onClose }: { order: Order; sellerId: strin
 
   useEffect(() => {
     if (!order.id) return;
-    const socket = io(SOCKET_URL, {
+    const socket = io(SOCKET_URL, { reconnectionAttempts: 3, reconnectionDelayMax: 10000, timeout: 5000,
       path: '/socket.io/',
       transports: ['websocket', 'polling']
     });
@@ -94,7 +96,7 @@ function ChatPanel({ order, sellerId, onClose }: { order: Order; sellerId: strin
       setText('');
     } catch (err) {
       console.error(err);
-      alert('Gagal mengirim pesan.');
+      toast('Gagal mengirim pesan.', 'error');
     } finally {
       setSending(false);
     }
@@ -103,7 +105,7 @@ function ChatPanel({ order, sellerId, onClose }: { order: Order; sellerId: strin
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !sellerId) return;
-    if (file.size > 1024 * 1024) { alert('Ukuran foto maks 1 MB.'); return; }
+    if (file.size > 1024 * 1024) { toast('Ukuran foto maks 1 MB.'); return; }
     setUploading(true);
 
     try {
@@ -116,7 +118,7 @@ function ChatPanel({ order, sellerId, onClose }: { order: Order; sellerId: strin
       await sendMessage('', res.data.imageUrl);
     } catch (err) {
       console.error(err);
-      alert('Gagal upload foto.');
+      toast('Gagal upload foto.', 'error');
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -250,6 +252,7 @@ function ChatPanel({ order, sellerId, onClose }: { order: Order; sellerId: strin
 }
 
 export default function AdminOrderManagement() {
+  const { toast, confirm: confirmAction } = usePopup();
   const { adminProfile, adminLoading } = useAdmin();
   const [allOrders, setAllOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
@@ -280,12 +283,12 @@ export default function AdminOrderManagement() {
       setAllOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: status as Order['status'] } : o));
     } catch (err) {
       console.error(err);
-      alert('Gagal update status');
+      toast('Gagal update status', 'error');
     }
   };
 
   const handleCancelWithChat = async (order: Order) => {
-    if (!confirm(`Batalkan pesanan #${order.id.slice(0, 8).toUpperCase()}? Pesan pembatalan akan dikirim ke pembeli.`)) return;
+    if (!(await confirmAction(`Batalkan pesanan #${order.id.slice(0, 8).toUpperCase()}? Pesan pembatalan akan dikirim ke pembeli.`))) return;
     setCancelling(order.id);
 
     try {
@@ -300,7 +303,7 @@ export default function AdminOrderManagement() {
       }
     } catch (err) {
       console.error(err);
-      alert('Gagal membatalkan');
+      toast('Gagal membatalkan', 'error');
     } finally {
       setCancelling(null);
     }
@@ -434,7 +437,12 @@ export default function AdminOrderManagement() {
                       <select
                         value={order.status}
                         onChange={e => updateStatus(order.id, e.target.value)}
-                        className="text-xs border border-outline-variant/20 rounded-lg px-2 py-1.5 bg-surface outline-none focus:ring-2 focus:ring-primary/20 text-on-surface"
+                        disabled={order.status === 'delivered' || order.status === 'completed' || order.status === 'cancelled'}
+                        className={`text-xs border border-outline-variant/20 rounded-lg px-2 py-1.5 outline-none focus:ring-2 focus:ring-primary/20 text-on-surface ${
+                          order.status === 'delivered' || order.status === 'completed' || order.status === 'cancelled'
+                            ? 'bg-surface-container-low opacity-50 cursor-not-allowed'
+                            : 'bg-surface cursor-pointer hover:border-primary/50'
+                        }`}
                       >
                         <option value="pending">Menunggu</option>
                         <option value="shipped">Dikirim</option>
@@ -451,7 +459,7 @@ export default function AdminOrderManagement() {
                           <span className="material-symbols-outlined text-sm">chat</span>
                           Chat
                         </button>
-                        {order.status !== 'cancelled' && (
+                        {order.status !== 'cancelled' && order.status !== 'delivered' && order.status !== 'completed' && (
                           <button
                             onClick={() => handleCancelWithChat(order)}
                             disabled={cancelling === order.id}

@@ -9,18 +9,38 @@ interface CartItem {
   price: number;
   image_url: string | null;
   quantity: number;
+  seller_id?: string;
+  shop_name?: string;
 }
 
-const PROMO_CODES: Record<string, number> = {
-  NEXUS10: 0.10,
-  NEXUS20: 0.20,
-  HEMAT50: 0.05,
+const getAvailableVouchers = (cartItems: CartItem[]) => {
+  const vouchers: Record<string, { code: string; discount: number; sellerId: string; shopName: string }> = {};
+  
+  const uniqueSellers = Array.from(new Set(cartItems.filter(i => i.seller_id).map(i => i.seller_id)));
+  
+  uniqueSellers.forEach((sellerId, index) => {
+    const item = cartItems.find(i => i.seller_id === sellerId);
+    if (item && item.shop_name) {
+      const shopPrefix = item.shop_name.replace(/[^a-zA-Z0-9]/g, '').substring(0, 5).toUpperCase();
+      const code = `${shopPrefix}HEMAT`;
+      vouchers[code] = {
+        code,
+        discount: 0.10 + (index * 0.05),
+        sellerId: sellerId as string,
+        shopName: item.shop_name
+      };
+    }
+  });
+
+  vouchers['NEXUS10'] = { code: 'NEXUS10', discount: 0.10, sellerId: 'GLOBAL', shopName: 'Semua Toko' };
+  
+  return vouchers;
 };
 
 export default function ShoppingCart() {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [promoInput, setPromoInput] = useState("");
-  const [appliedPromo, setAppliedPromo] = useState<{ code: string; discount: number } | null>(null);
+  const [appliedPromo, setAppliedPromo] = useState<{ code: string; discount: number; sellerId: string } | null>(null);
   const [promoError, setPromoError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -44,16 +64,18 @@ export default function ShoppingCart() {
     save(cartItems.filter(item => item.id !== id));
   };
 
-  const applyPromo = () => {
-    const code = promoInput.trim().toUpperCase();
+  const applyPromo = (overrideCode?: unknown) => {
+    const code = (typeof overrideCode === 'string' ? overrideCode : promoInput).trim().toUpperCase();
     if (!code) { setPromoError("Masukkan kode promo terlebih dahulu."); return; }
-    const discount = PROMO_CODES[code];
-    if (!discount) {
-      setPromoError("Kode promo tidak valid atau sudah kadaluarsa.");
+    const availableVouchers = getAvailableVouchers(cartItems);
+    const voucher = availableVouchers[code];
+    if (!voucher) {
+      setPromoError("Kode promo tidak valid atau tidak berlaku untuk barang di keranjang Anda.");
       setAppliedPromo(null);
       return;
     }
-    setAppliedPromo({ code, discount });
+    setAppliedPromo({ code, discount: voucher.discount, sellerId: voucher.sellerId });
+    if (typeof overrideCode === 'string') setPromoInput(code);
     setPromoError(null);
   };
 
@@ -64,7 +86,19 @@ export default function ShoppingCart() {
   };
 
   const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const discountAmount = appliedPromo ? Math.round(subtotal * appliedPromo.discount) : 0;
+  
+  let discountAmount = 0;
+  if (appliedPromo) {
+    if (appliedPromo.sellerId === 'GLOBAL') {
+      discountAmount = Math.round(subtotal * appliedPromo.discount);
+    } else {
+      const eligibleSubtotal = cartItems
+        .filter(item => item.seller_id === appliedPromo.sellerId)
+        .reduce((sum, item) => sum + item.price * item.quantity, 0);
+      discountAmount = Math.round(eligibleSubtotal * appliedPromo.discount);
+    }
+  }
+  
   const total = subtotal - discountAmount;
 
   return (
@@ -97,15 +131,27 @@ export default function ShoppingCart() {
                 >
                   <div className="flex flex-col sm:flex-row gap-6">
                     <div className="w-full sm:w-24 sm:h-24 aspect-square sm:aspect-auto rounded-lg overflow-hidden flex-shrink-0 bg-surface-container-low">
-                      <img
-                        alt={item.name}
-                        className="w-full h-full object-cover"
-                        src={item.image_url || "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&auto=format&fit=crop&q=60"}
-                      />
+                      {item.image_url ? (
+                        <img
+                          alt={item.name}
+                          className="w-full h-full object-cover"
+                          src={item.image_url}
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-surface-container-low text-outline">
+                          <span className="material-symbols-outlined text-4xl opacity-50">inventory_2</span>
+                        </div>
+                      )}
                     </div>
                     <div className="flex-grow flex flex-col justify-between">
                       <div className="flex flex-col sm:flex-row justify-between items-start gap-2">
-                        <h3 className="font-bold text-lg leading-tight text-on-surface">{item.name}</h3>
+                        <div>
+                          <h3 className="font-bold text-lg leading-tight text-on-surface">{item.name}</h3>
+                          <div className="flex items-center gap-1 mt-1 text-xs font-medium text-on-surface-variant">
+                            <span className="material-symbols-outlined text-[14px]">store</span>
+                            <span>{item.shop_name || 'Toko tidak diketahui'}</span>
+                          </div>
+                        </div>
                         <span className="font-bold text-xl text-primary">
                           Rp {(item.price * item.quantity).toLocaleString('id-ID')}
                         </span>
@@ -135,7 +181,7 @@ export default function ShoppingCart() {
                           </button>
                         </div>
                         <p className="text-sm text-on-surface-variant">
-                          Rp {item.price.toLocaleString('id-ID')} / item
+                          Rp {Number(item.price).toLocaleString('id-ID')} / item
                         </p>
                       </div>
                     </div>
@@ -206,7 +252,24 @@ export default function ShoppingCart() {
                           {promoError}
                         </p>
                       )}
-                      <p className="text-xs text-on-surface-variant">Coba: NEXUS10, NEXUS20, atau HEMAT50</p>
+                      
+                      <div className="mt-3">
+                        <p className="text-xs font-bold text-on-surface-variant mb-2">Voucher Tersedia:</p>
+                        <div className="flex flex-wrap gap-2">
+                          {Object.values(getAvailableVouchers(cartItems)).map(voucher => (
+                            <button
+                              key={voucher.code}
+                              onClick={() => applyPromo(voucher.code)}
+                              className={`text-[10px] font-bold px-3 py-1.5 rounded-full border transition-all ${
+                                promoInput === voucher.code ? 'border-primary bg-primary/10 text-primary' : 'border-outline-variant/30 text-on-surface-variant hover:border-primary/50'
+                              }`}
+                              title={voucher.sellerId === 'GLOBAL' ? 'Berlaku untuk semua toko' : `Berlaku khusus untuk toko ${voucher.shopName}`}
+                            >
+                              {voucher.code} ({(voucher.discount*100).toFixed(0)}%)
+                            </button>
+                          ))}
+                        </div>
+                      </div>
                     </div>
                   )}
                 </div>

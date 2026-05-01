@@ -19,7 +19,7 @@ export default function UserDashboardWishlist() {
     async function fetchWishlist() {
       try {
         setLoading(true);
-        const { data } = await api.get('/wishlist');
+        const { data } = await api.get('/wishlists');
         if (data) setWishlistItems(data);
       } catch (err) {
         console.error(err);
@@ -32,7 +32,7 @@ export default function UserDashboardWishlist() {
 
   const removeFromWishlist = async (wishlistId: string) => {
     try {
-      await api.delete(`/wishlist/${wishlistId}`);
+      await api.delete(`/wishlists/${wishlistId}`);
       setWishlistItems(prev => prev.filter(item => item.id !== wishlistId));
     } catch (err) {
       console.error(err);
@@ -89,18 +89,26 @@ export default function UserDashboardWishlist() {
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {wishlistItems.map(item => {
-                  const product = item.product;
+                  const product = item.product as any;
+                  const isArchived = product?.is_archived === true;
                   const outOfStock = product && product.stock === 0;
+                  const unavailable = outOfStock || isArchived;
+                  
                   return (
                     <div
                       key={item.id}
-                      className={`group bg-surface-container-lowest rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 relative ${outOfStock ? 'opacity-70' : ''}`}
+                      className={`group bg-surface-container-lowest rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 relative ${unavailable ? 'opacity-70' : ''}`}
                     >
-                      {outOfStock && (
+                      {isArchived ? (
+                        <div className="absolute top-3 left-3 z-10 bg-red-900/80 text-white px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider">
+                          Produk Dihapus
+                        </div>
+                      ) : outOfStock ? (
                         <div className="absolute top-3 left-3 z-10 bg-slate-900/80 text-white px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider">
                           Stok Habis
                         </div>
-                      )}
+                      ) : null}
+
                       <button
                         onClick={() => removeFromWishlist(item.id)}
                         className="absolute top-3 right-3 z-10 w-10 h-10 bg-white/90 backdrop-blur rounded-full flex items-center justify-center text-error hover:scale-110 transition-transform shadow-sm"
@@ -109,30 +117,44 @@ export default function UserDashboardWishlist() {
                         <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>favorite</span>
                       </button>
 
-                      <Link to={product ? `/product/${product.id}` : '#'}>
-                        <div className={`aspect-square bg-surface-variant overflow-hidden ${outOfStock ? 'grayscale' : ''}`}>
+                      {isArchived ? (
+                        <div className="aspect-square bg-surface-variant overflow-hidden grayscale">
                           {product?.image_url ? (
-                            <img src={product.image_url} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                            <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center">
                               <span className="material-symbols-outlined text-5xl text-slate-300">image</span>
                             </div>
                           )}
                         </div>
-                      </Link>
+                      ) : (
+                        <Link to={product ? `/product/${product.id}` : '#'}>
+                          <div className={`aspect-square bg-surface-variant overflow-hidden ${outOfStock ? 'grayscale' : ''}`}>
+                            {product?.image_url ? (
+                              <img src={product.image_url} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center">
+                                <span className="material-symbols-outlined text-5xl text-slate-300">image</span>
+                              </div>
+                            )}
+                          </div>
+                        </Link>
+                      )}
 
                       <div className="p-5">
-                        <p className="text-xs text-on-surface-variant mb-1">{product?.category?.name}</p>
-                        <h3 className="font-bold text-on-surface leading-tight mb-1 truncate">{product?.name || 'Produk'}</h3>
+                        <p className="text-xs text-on-surface-variant mb-1">{product?.category?.name || 'Kategori'}</p>
+                        <h3 className={`font-bold leading-tight mb-1 truncate ${isArchived ? 'text-on-surface-variant line-through' : 'text-on-surface'}`}>
+                          {product?.name || 'Produk'}
+                        </h3>
                         <div className="flex items-center justify-between mt-3">
-                          <p className="text-lg font-black text-blue-600">
-                            Rp {product?.price?.toLocaleString('id-ID') || '0'}
+                          <p className={`text-lg font-black ${isArchived ? 'text-slate-400' : 'text-blue-600'}`}>
+                            Rp {Number(product?.price || 0).toLocaleString('id-ID')}
                           </p>
                           <button
-                            onClick={() => product && !outOfStock && addToCart(product)}
-                            disabled={outOfStock}
-                            className={`p-2 rounded-lg transition-colors ${outOfStock ? 'bg-slate-200 text-slate-400 cursor-not-allowed' : 'bg-slate-50 hover:bg-blue-50 text-blue-600'}`}
-                            title="Tambah ke keranjang"
+                            onClick={() => product && !unavailable && addToCart(product)}
+                            disabled={unavailable}
+                            className={`p-2 rounded-lg transition-colors ${unavailable ? 'bg-slate-200 text-slate-400 cursor-not-allowed' : 'bg-slate-50 hover:bg-blue-50 text-blue-600'}`}
+                            title={isArchived ? "Produk tidak tersedia" : "Tambah ke keranjang"}
                           >
                             <span className="material-symbols-outlined">add_shopping_cart</span>
                           </button>

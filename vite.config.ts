@@ -21,7 +21,7 @@ export default defineConfig({
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://snap-assets.al-pc-id-b.cdn.gtflabs.io",
         "font-src 'self' data: https://fonts.gstatic.com https://snap-assets.al-pc-id-b.cdn.gtflabs.io",
         "img-src 'self' data: blob: https: http://localhost:5000",
-        "connect-src 'self' http://localhost:5000 ws://localhost:5173 https://*.midtrans.com https://gwk.gopayapi.com https://snap-assets.al-pc-id-b.cdn.gtflabs.io",
+        "connect-src 'self' http://localhost:5000 ws://localhost:5000 ws://localhost:5173 https://*.midtrans.com https://gwk.gopayapi.com https://snap-assets.al-pc-id-b.cdn.gtflabs.io",
         "frame-src 'self' https://app.sandbox.midtrans.com https://api.sandbox.midtrans.com https://gwk.gopayapi.com",
         "frame-ancestors 'self'",
         "worker-src 'self' blob:",

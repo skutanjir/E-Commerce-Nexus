@@ -4,16 +4,13 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { io, Socket } from 'socket.io-client';
 import { api } from '../../lib/api';
 import { useUser } from '../../contexts/UserContext';
-import DashboardSidebar from '../../components/layout/DashboardSidebar';
+import SellerSidebar from '../../components/layout/SellerSidebar';
 import DashboardNav from '../../components/layout/DashboardNav';
-import type { Order, ChatMessage } from '../../types';
+import type { ChatMessage } from '../../types';
 
-// Extract the base URL from API URL (removing /api if present) for socket connection
 const SOCKET_URL = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
 
-// ─── Chat List View ────────────────────────────────────────────────────────────
-function ChatList({ navigate }: { navigate: ReturnType<typeof useNavigate> }) {
-  const { toast, confirm: confirmAction } = usePopup();
+function SellerChatList({ navigate }: { navigate: ReturnType<typeof useNavigate> }) {
   const { user } = useUser();
   const [contacts, setContacts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -34,10 +31,10 @@ function ChatList({ navigate }: { navigate: ReturnType<typeof useNavigate> }) {
   }, [user]);
 
   return (
-    <div className="md:col-span-9 flex flex-col" style={{ minHeight: 'calc(100vh - 12rem)' }}>
-      <div className="flex-shrink-0 pt-4 pb-2">
-        <h1 className="text-xl lg:text-2xl font-black text-on-surface tracking-tight mb-1">Pesan</h1>
-        <p className="text-xs lg:text-sm text-on-surface-variant mb-4">Chat langsung dengan Seller toko favoritmu.</p>
+    <div className="h-full flex flex-col px-4 lg:px-8 max-w-5xl mx-auto w-full pt-8 pb-4">
+      <div className="flex-shrink-0 mb-6">
+        <h1 className="text-2xl lg:text-3xl font-black text-on-surface tracking-tight mb-2">Pesan Pelanggan</h1>
+        <p className="text-sm text-on-surface-variant">Kelola pesan dan balasan untuk pelanggan Anda.</p>
       </div>
       <div className="flex-1 bg-surface-container-lowest rounded-xl border border-outline-variant/10 shadow-sm overflow-hidden flex flex-col min-h-0">
         {loading ? (
@@ -47,29 +44,28 @@ function ChatList({ navigate }: { navigate: ReturnType<typeof useNavigate> }) {
             ))}
           </div>
         ) : contacts.length === 0 ? (
-          <div className="p-12 text-center text-on-surface-variant">
+          <div className="flex-1 flex flex-col items-center justify-center p-12 text-center text-on-surface-variant">
             <span className="material-symbols-outlined text-5xl mb-4 block opacity-30">chat</span>
-            <p className="mb-3">Belum ada riwayat pesan.</p>
-            <Link to="/shop-catalogue" className="text-primary font-bold hover:underline">Mulai Belanja</Link>
+            <p>Belum ada pelanggan yang menghubungi Anda.</p>
           </div>
         ) : (
-          <div className="divide-y divide-outline-variant/10">
+          <div className="divide-y divide-outline-variant/10 flex-1 overflow-y-auto">
             {contacts.map(contact => (
               <button
                 key={contact.id}
-                onClick={() => navigate(`/user-dashboard-chat/${contact.id}`)}
-                className="w-full flex items-center gap-4 p-5 hover:bg-surface-container-low transition-colors text-left"
+                onClick={() => navigate(`/admin-dashboard-chat/${contact.id}`)}
+                className="w-full flex items-center gap-4 p-4 lg:p-5 hover:bg-surface-container-low transition-colors text-left"
               >
-                <div className="w-14 h-14 rounded-full overflow-hidden bg-surface-container-low flex-shrink-0 flex items-center justify-center">
+                <div className="w-12 h-12 lg:w-14 lg:h-14 rounded-full overflow-hidden bg-surface-container-low flex-shrink-0 flex items-center justify-center">
                   {contact.avatar_url ? (
                     <img src={contact.avatar_url} alt="" className="w-full h-full object-cover" />
                   ) : (
-                    <span className="material-symbols-outlined text-outline text-3xl">storefront</span>
+                    <span className="material-symbols-outlined text-outline text-2xl lg:text-3xl">person</span>
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="font-bold text-on-surface text-base truncate">{contact.full_name || 'Penjual'}</p>
-                  <p className="text-xs text-on-surface-variant mt-0.5">Toko Pilihan</p>
+                  <p className="font-bold text-on-surface text-sm lg:text-base truncate">{contact.full_name || 'Pelanggan'}</p>
+                  <p className="text-[10px] lg:text-xs text-on-surface-variant mt-0.5 truncate">{contact.email}</p>
                 </div>
                 <span className="material-symbols-outlined text-on-surface-variant text-sm">chevron_right</span>
               </button>
@@ -81,15 +77,11 @@ function ChatList({ navigate }: { navigate: ReturnType<typeof useNavigate> }) {
   );
 }
 
-// ─── Chat Detail View ──────────────────────────────────────────────────────────
-function ChatDetail({ contactId, navigate }: {
-  contactId: string;
-  navigate: ReturnType<typeof useNavigate>;
-}) {
-  const { toast, confirm: confirmAction } = usePopup();
+function SellerChatDetail({ contactId, navigate }: { contactId: string; navigate: ReturnType<typeof useNavigate>; }) {
+  const { toast } = usePopup();
   const { user } = useUser();
   const [messages, setMessages] = useState<any[]>([]);
-  const [contactName, setContactName] = useState('Penjual');
+  const [contactName, setContactName] = useState('Pelanggan');
   const [contactAvatar, setContactAvatar] = useState('');
   const [text, setText] = useState('');
   const [sending, setSending] = useState(false);
@@ -99,7 +91,6 @@ function ChatDetail({ contactId, navigate }: {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const socketRef = useRef<Socket | null>(null);
 
-  // Fetch info
   useEffect(() => {
     if (!user || !contactId) return;
     async function load() {
@@ -117,7 +108,7 @@ function ChatDetail({ contactId, navigate }: {
         }
       } catch (err) {
         console.error(err);
-        navigate('/user-dashboard-chat');
+        navigate('/admin-dashboard/chat');
       } finally {
         setLoadingInitial(false);
       }
@@ -125,7 +116,6 @@ function ChatDetail({ contactId, navigate }: {
     load();
   }, [contactId, user, navigate]);
 
-  // Socket
   useEffect(() => {
     if (!user || !contactId) return;
     const socket = io(SOCKET_URL, { reconnectionAttempts: 3, reconnectionDelayMax: 10000, timeout: 5000,
@@ -135,12 +125,12 @@ function ChatDetail({ contactId, navigate }: {
     socketRef.current = socket;
 
     socket.on('connect', () => {
-      socket.emit('join_chat', { userId: user.id, sellerId: contactId });
+      socket.emit('join_chat', { userId: contactId, sellerId: user.id });
     });
 
     socket.on('new_message', (newMessage: any) => {
-      if ((newMessage.user_id === user.id && newMessage.seller_id === contactId) ||
-          (newMessage.seller_id === user.id && newMessage.user_id === contactId)) {
+      if ((newMessage.user_id === contactId && newMessage.seller_id === user.id) ||
+          (newMessage.seller_id === contactId && newMessage.user_id === user.id)) {
         setMessages(prev => {
           const exists = prev.some(m => m.id === newMessage.id);
           return exists ? prev : [...prev, newMessage];
@@ -207,53 +197,49 @@ function ChatDetail({ contactId, navigate }: {
 
   if (loadingInitial) {
     return (
-      <div className="md:col-span-9 space-y-4">
+      <div className="h-full flex flex-col pt-4 lg:pt-0 space-y-4">
         <div className="h-10 w-48 bg-surface-container-low animate-pulse rounded-xl" />
-        <div className="h-[500px] bg-surface-container-low animate-pulse rounded-xl" />
+        <div className="flex-1 bg-surface-container-low animate-pulse rounded-xl" />
       </div>
     );
   }
 
   return (
-    <div className="md:col-span-9 flex flex-col" style={{ height: 'calc(100vh - 10rem)', minHeight: '500px' }}>
-      {/* Header */}
-      <div className="flex items-center gap-3 mb-4">
+    <div className="h-full flex flex-col pt-4 lg:pt-0">
+      <div className="flex items-center gap-2 lg:gap-3 mb-4">
         <button
-          onClick={() => navigate('/user-dashboard-chat')}
-          className="p-2 rounded-lg hover:bg-surface-container-low transition-colors text-on-surface-variant"
+          onClick={() => navigate('/admin-dashboard-chat')}
+          className="p-1.5 lg:p-2 rounded-lg hover:bg-surface-container-low transition-colors text-on-surface-variant"
         >
-          <span className="material-symbols-outlined">arrow_back</span>
+          <span className="material-symbols-outlined text-lg lg:text-2xl">arrow_back</span>
         </button>
-        <div className="flex items-center gap-3 flex-1">
-          <div className="w-10 h-10 rounded-full overflow-hidden bg-surface-container-low flex-shrink-0 flex items-center justify-center">
+        <div className="flex items-center gap-2 lg:gap-3 flex-1">
+          <div className="w-8 h-8 lg:w-10 lg:h-10 rounded-full overflow-hidden bg-surface-container-low flex-shrink-0 flex items-center justify-center">
             {contactAvatar ? (
               <img src={contactAvatar} alt="" className="w-full h-full object-cover" />
             ) : (
-              <span className="material-symbols-outlined text-outline text-xl">storefront</span>
+              <span className="material-symbols-outlined text-outline text-lg lg:text-xl">person</span>
             )}
           </div>
           <div>
-            <p className="font-bold text-on-surface text-sm line-clamp-1">{contactName}</p>
-            <p className="text-[10px] text-green-600 font-bold bg-green-50 px-2 py-0.5 rounded-full inline-block mt-0.5">Online</p>
+            <p className="font-bold text-on-surface text-xs lg:text-sm line-clamp-1">{contactName}</p>
+            <p className="text-[9px] lg:text-[10px] text-green-600 font-bold bg-green-50 px-2 py-0.5 rounded-full inline-block mt-0.5">Online</p>
           </div>
         </div>
       </div>
 
-      {/* Messages */}
-      <div className="flex-1 bg-surface-container-lowest rounded-xl border border-outline-variant/10 overflow-y-auto p-4 space-y-3 min-h-0">
+      <div className="flex-1 bg-surface-container-lowest rounded-xl border border-outline-variant/10 overflow-y-auto p-3 lg:p-4 space-y-3 min-h-0 flex flex-col">
         {messages.length === 0 && (
-          <div className="flex flex-col items-center justify-center h-full text-on-surface-variant">
-            <span className="material-symbols-outlined text-4xl mb-3 opacity-30">chat_bubble</span>
-            <p className="text-sm">Kirim pesan pertama ke penjual.</p>
+          <div className="flex-1 flex flex-col items-center justify-center text-center text-on-surface-variant">
+            <span className="material-symbols-outlined text-3xl lg:text-4xl mb-2 lg:mb-3 opacity-30">chat_bubble</span>
+            <p className="text-xs lg:text-sm">Belum ada pesan. Mulai obrolan dengan pembeli.</p>
           </div>
         )}
         {messages.map((msg, index) => {
           const isMe = msg.sender_id === user?.id;
           const uniqueKey = msg.id || `msg-${index}`;
 
-          if (msg.message_type === 'cancellation') {
-            return null; // Skip order cancellations in profile chat
-          }
+          if (msg.message_type === 'cancellation') return null;
 
           if (msg.message_type === 'system') {
             return (
@@ -270,7 +256,7 @@ function ChatDetail({ contactId, navigate }: {
                   ? 'bg-primary text-white rounded-br-sm'
                   : 'bg-surface-container-low text-on-surface rounded-bl-sm border border-outline-variant/10'
               }`}>
-                {!isMe && <p className="text-[10px] font-bold mb-1 opacity-60 uppercase tracking-wider">Penjual</p>}
+                {!isMe && <p className="text-[10px] font-bold mb-1 opacity-60 uppercase tracking-wider">Pelanggan</p>}
                 {msg.image_url && (
                   <img
                     src={msg.image_url}
@@ -290,8 +276,7 @@ function ChatDetail({ contactId, navigate }: {
         <div ref={bottomRef} />
       </div>
 
-      {/* Input area */}
-      <div className="mt-3 flex items-end gap-2">
+      <div className="mt-2 lg:mt-3 flex items-end gap-1.5 lg:gap-2">
         <input
           ref={fileInputRef}
           type="file"
@@ -302,13 +287,12 @@ function ChatDetail({ contactId, navigate }: {
         <button
           onClick={() => fileInputRef.current?.click()}
           disabled={uploading}
-          className="p-3 rounded-xl bg-surface-container-low text-on-surface-variant hover:bg-surface-container-highest transition-colors flex-shrink-0 disabled:opacity-50"
-          title="Kirim foto (maks. 1 MB)"
+          className="p-2 lg:p-3 rounded-xl bg-surface-container-low text-on-surface-variant hover:bg-surface-container-highest transition-colors flex-shrink-0 disabled:opacity-50"
         >
           {uploading ? (
-            <div className="w-5 h-5 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+            <div className="w-4 h-4 lg:w-5 lg:h-5 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
           ) : (
-            <span className="material-symbols-outlined text-xl">image</span>
+            <span className="material-symbols-outlined text-lg lg:text-xl">image</span>
           )}
         </button>
         <div className="flex-1 bg-surface-container-lowest border border-outline-variant/20 rounded-xl flex items-end overflow-hidden">
@@ -316,58 +300,49 @@ function ChatDetail({ contactId, navigate }: {
             value={text}
             onChange={e => setText(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
-            placeholder="Tulis pesan..."
+            placeholder="Ketik balasan..."
             rows={1}
-            className="w-full px-4 py-3 bg-transparent outline-none text-sm text-on-surface resize-none max-h-32"
+            className="w-full px-3 lg:px-4 py-2.5 lg:py-3 bg-transparent outline-none text-xs lg:text-sm text-on-surface resize-none max-h-24 lg:max-h-32"
           />
         </div>
         <button
           onClick={() => sendMessage()}
           disabled={!text.trim() || sending}
-          className="p-3 rounded-xl bg-primary text-white hover:opacity-90 active:scale-95 transition-all flex-shrink-0 disabled:opacity-50"
+          className="p-2 lg:p-3 rounded-xl bg-primary text-white hover:opacity-90 active:scale-95 transition-all flex-shrink-0 disabled:opacity-50"
         >
-          <span className="material-symbols-outlined text-xl">send</span>
+          <span className="material-symbols-outlined text-lg lg:text-xl">send</span>
         </button>
       </div>
     </div>
   );
 }
 
-// ─── Main Export ───────────────────────────────────────────────────────────────
-export default function ChatPage() {
+export default function SellerChatPage() {
   const { toast, confirm: confirmAction } = usePopup();
   const { contactId } = useParams<{ contactId?: string }>();
   const navigate = useNavigate();
-  const { user, profile, authLoading } = useUser();
+  const { user, authLoading } = useUser();
 
   useEffect(() => {
     if (authLoading) return;
-    if (!user) navigate('/login-page');
+    if (!user || user.role !== 'seller') navigate('/login-page');
   }, [user, authLoading, navigate]);
 
   if (authLoading) {
     return (
-      <div className="flex justify-center items-center h-screen">
+      <div className="flex justify-center items-center h-full min-h-[50vh]">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary" />
       </div>
     );
   }
 
   return (
-    <>
-      <DashboardNav profile={profile} />
-      <main className="pt-24 pb-16 px-4 md:px-8 max-w-7xl mx-auto min-h-screen">
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-8 h-full">
-          <div className={`${contactId ? 'hidden md:block md:col-span-3' : 'md:col-span-3'}`}>
-            <DashboardSidebar profile={profile} />
-          </div>
-          {contactId ? (
-            <ChatDetail contactId={contactId} navigate={navigate} />
-          ) : (
-            <ChatList navigate={navigate} />
-          )}
-        </div>
-      </main>
-    </>
+    <div className="w-full h-[calc(100vh-2rem)] lg:h-[calc(100vh-6rem)]">
+      {contactId ? (
+        <SellerChatDetail contactId={contactId} navigate={navigate} />
+      ) : (
+        <SellerChatList navigate={navigate} />
+      )}
+    </div>
   );
 }

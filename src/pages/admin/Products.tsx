@@ -1,3 +1,4 @@
+import { usePopup } from '../../contexts/PopupContext';
 import { useEffect, useState } from 'react';
 import { api } from '../../lib/api';
 import type { Product, Category } from '../../types';
@@ -5,6 +6,7 @@ import type { Product, Category } from '../../types';
 const EMPTY_FORM = { name: '', description: '', price: '', stock: '', category_id: '', image_url: '' };
 
 export default function AdminProductManagement() {
+  const { toast, confirm: confirmAction } = usePopup();
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
@@ -33,10 +35,12 @@ export default function AdminProductManagement() {
     fetchData();
   }, []);
 
-  const filteredProducts = products.filter(p =>
-    p.name.toLowerCase().includes(search.toLowerCase()) ||
-    p.category?.name?.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredProducts = products.filter(p => {
+    const pName = p.name ? p.name.toLowerCase() : '';
+    const cName = p.category?.name ? p.category.name.toLowerCase() : '';
+    const q = search ? search.toLowerCase() : '';
+    return pName.includes(q) || cName.includes(q);
+  });
 
   const totalProducts = products.length;
   const lowStock = products.filter(p => p.stock > 0 && p.stock <= 10).length;
@@ -76,7 +80,7 @@ export default function AdminProductManagement() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Hapus produk ini?')) return;
+    if (!(await confirmAction('Hapus produk ini?'))) return;
     try {
       await api.delete(`/products/${id}`);
       setProducts(prev => prev.filter(p => p.id !== id));

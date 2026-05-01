@@ -1,340 +1,159 @@
-# Nexus
+# NEXUS E-COMMERCE FRONTEND APPLICATION
 
-A full-stack e-commerce web application built with React, TypeScript, Vite, Supabase, and Tailwind CSS. The platform supports two distinct user roles: buyers who browse products, manage carts and wishlists, and place orders; and sellers who administer inventory, categories, orders, discounts, and view analytics through a dedicated dashboard.
+## OVERVIEW
 
----
+This repository encompasses the frontend user interface for the Nexus E-Commerce platform. It serves both routine consumers targeting intuitive interactions to browse, purchase, and review products, and administrative sellers who require a dedicated dashboard to control their inventories, trace orders, and engage directly with their customers.
 
-## Table of Contents
-
-- [Features](#features)
-- [Technology Stack](#technology-stack)
-- [Project Structure](#project-structure)
-- [Prerequisites](#prerequisites)
-- [Getting Started](#getting-started)
-- [Environment Variables](#environment-variables)
-- [Database Schema](#database-schema)
-- [Available Scripts](#available-scripts)
-- [Routing Overview](#routing-overview)
-- [Authentication and Authorization](#authentication-and-authorization)
-- [Deployment](#deployment)
+This documentation serves as an essential manual detailing project boundaries, dynamic routing strategies, application structure, and feature layouts.
 
 ---
 
-## Features
+## ARCHITECTURE AND TECHNOLOGY STACK
 
-### Buyer (User)
+The front-end client acts as a Single Page Application (SPA), emphasizing state continuity, rapid interactions, and modern web application security practices.
 
-- Browse products by category or via the shop catalogue
-- View detailed product pages with stock status
-- Add and remove items from a persistent shopping cart (localStorage)
-- Manage a wishlist (Supabase-backed)
-- Checkout with saved shipping addresses
-- View order history with real-time status tracking
-- Manage multiple shipping addresses including a default selection
-- Update profile information (name, phone, gender)
-
-### Seller (Admin)
-
-- Dashboard overview with real-time statistics
-- Full product management: create, read, update, delete with category assignment
-- Category management with auto-generated URL slugs
-- Order management with inline status updates (pending, shipped, delivered, cancelled)
-- Discount and promotion management
-- Analytics report: revenue, top products by revenue, order status distribution, financial summary
-
-### General
-
-- Role-based access control enforced on every protected route
-- Responsive layout for desktop use
-- Material Symbols icon integration
-- Authentication-aware navbar with user dropdown
+| Layer / Domain | Technology Used | Description |
+|---|---|---|
+| Framework | React 18 | Declarative, component-based user interface framework. |
+| System Builder | Vite | Next-generation frontend tooling providing extremely fast Hot Module Replacement. |
+| Programming Language| TypeScript | Superset of JavaScript enforcing strict typing checks. |
+| CSS Framework | Tailwind CSS | Utility-first CSS framework for rapid and responsive visual alignments. |
+| Routing Protocol | React Router DOM | Declarative routing defining public and highly secured URL patterns. |
+| HTTP Client | Axios | Promise-based HTTP client designated for consuming our Backend REST API. |
+| State Management | React Context | Native context distribution eliminating extensive prop-drilling for core states. |
 
 ---
 
-## Technology Stack
+## PROJECT DIRECTORY STRUCTURE
 
-| Layer | Technology |
-|---|---|
-| Framework | React 19 |
-| Language | TypeScript 6 |
-| Build tool | Vite 8 |
-| Styling | Tailwind CSS 3 with custom design tokens |
-| Routing | React Router DOM 7 |
-| Backend / Auth / DB | Supabase (PostgreSQL + Auth) |
-| Linting | ESLint 9 with typescript-eslint |
+The project is structured deliberately to segregate generic informative layouts from deeply embedded analytical dashboards. 
 
----
-
-## Project Structure
-
-```
+```text
 nexus-react/
-├── public/                     Static assets served as-is
+├── public/                 Static media such as placeholder images, favicons.
 ├── src/
-│   ├── components/
-│   │   └── layout/
-│   │       ├── DashboardSidebar.tsx   Shared sidebar for buyer dashboard pages
-│   │       ├── SellerSidebar.tsx      Shared sidebar for seller/admin pages
-│   │       └── Navbar.tsx             Auth-aware top navigation bar
+│   ├── components/         Reusable, atomic interface building blocks.
+│   │   └── layout/         Shared wrappers like Footer, Navbar, and Responsive Sidebars.
+│   ├── contexts/           Global Context Providers.
+│   │   ├── PopupContext    Centralized toast notifications and modal overlay controllers.
+│   │   └── UserContext     Global session holding the JWT configuration and Profile details.
 │   ├── lib/
-│   │   └── supabase.ts               Supabase client initialisation
-│   ├── pages/
-│   │   ├── admin/
-│   │   │   ├── Analytics.tsx          Reports and analytics
-│   │   │   ├── Categories.tsx         Category management
-│   │   │   ├── Discounts.tsx          Discount and promotion management
-│   │   │   ├── LayoutWrapper.tsx      Admin layout wrapper
-│   │   │   ├── Orders.tsx             Order management
-│   │   │   ├── Overview.tsx           Admin dashboard overview
-│   │   │   └── Products.tsx           Product management
-│   │   ├── auth/
-│   │   │   ├── Login.tsx              Login page
-│   │   │   └── Register.tsx           Registration page
-│   │   ├── dashboard/
-│   │   │   ├── Addresses.tsx          Shipping address management
-│   │   │   ├── Orders.tsx             Buyer order history
-│   │   │   ├── Overview.tsx           Buyer dashboard overview
-│   │   │   ├── Profile.tsx            Profile settings
-│   │   │   └── Wishlist.tsx           Saved products / wishlist
-│   │   ├── home/
-│   │   │   └── LandingPage.tsx        Public homepage
-│   │   ├── info/
-│   │   │   └── About.tsx              About page
-│   │   └── shop/
-│   │       ├── Cart.tsx               Shopping cart
-│   │       ├── Catalogue.tsx          Full product catalogue
-│   │       ├── Categories.tsx         Category listing
-│   │       ├── CategoryProducts.tsx   Products filtered by category
-│   │       ├── Checkout.tsx           Checkout flow
-│   │       └── ProductDetail.tsx      Individual product page
+│   │   └── api.ts          Global Axios instance with interceptors for Token Authorization.
+│   ├── pages/              Route-Specific major views and business requirements.
+│   │   ├── admin/          Seller Dashboard files (Overview, Inventory, Categories, Analytics).
+│   │   ├── auth/           Authentication gates (Login, Register).
+│   │   ├── dashboard/      Consumer Dashboard files (Order Histories, Shipping Addresses).
+│   │   ├── home/           Landing platform elements and carousels.
+│   │   ├── info/           Static informative pages (Terms of Service, Policies).
+│   │   └── shop/           E-commerce critical path pages (Cart, Checkout, Product Detail, Seller Profiles).
 │   ├── types/
-│   │   └── index.ts                  Shared TypeScript interfaces
-│   ├── App.tsx                       Root component with route definitions
-│   ├── main.tsx                      Application entry point
-│   └── index.css                     Global styles and Tailwind directives
-├── supabase/                         Supabase configuration and migrations
-├── .env.example                      Example environment variable file
-├── tailwind.config.js                Tailwind configuration with custom tokens
-├── tsconfig.json                     TypeScript root configuration
-├── vite.config.ts                    Vite build configuration
-└── package.json
+│   │   └── index.ts        Strict TypeScript interfaces unifying backend mappings (Product, CartItem, Order).
+│   ├── App.tsx             Global Route Map injecting Context Providers.
+│   ├── main.tsx            DOM Entry point attaching React to `index.html`.
+│   └── index.css           Tailwind injection and global CSS resets.
+├── .env.example            Blueprint for environment parameters.
+├── package.json            Dependencies and runtime scripts.
+├── tailwind.config.js      Extended color palettes mapping Nexus-specific theme variables.
+└── vite.config.ts          Vite builder configurations.
 ```
 
 ---
 
-## Prerequisites
+## ENVIRONMENT VARIABLES
 
-- Node.js 18 or higher
-- npm 9 or higher
-- A Supabase project (free tier is sufficient)
+The frontend communicates aggressively with external services. Rename `.env.example` to `.env` and fill the parameters. In Vite, environment variables exposed to the browser must strictly use the `VITE_` prefix.
 
----
-
-## Getting Started
-
-**1. Clone the repository**
-
-```bash
-git clone <repository-url>
-cd nexus-react
-```
-
-**2. Install dependencies**
-
-```bash
-npm install
-```
-
-**3. Configure environment variables**
-
-```bash
-cp .env.example .env
-```
-
-Open `.env` and set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` with values from your Supabase project dashboard under Settings > API.
-
-**4. Set up the Supabase database**
-
-Apply the schema migrations found in the `supabase/` directory to your Supabase project, or run:
-
-```bash
-npx supabase db push
-```
-
-Ensure Row Level Security policies are configured appropriately for the `profiles`, `products`, `categories`, `orders`, `order_items`, `addresses`, and `wishlists` tables.
-
-**5. Start the development server**
-
-```bash
-npm run dev
-```
-
-The application will be available at `http://localhost:5173`.
+| Variable Name | Required | Default Value | Description |
+|---|---|---|---|
+| `VITE_API_URL` | Yes | `http://localhost:5000/api` | Absolute path targeting the Nexus Backend API. |
+| `VITE_SOCKET_URL` | Yes | `http://localhost:5000` | Absolute path targeting the Socket.io WebSocket port. |
+| `VITE_FILE_URL` | Yes | `http://localhost:5000` | Static asset URL provider for backend-hosted uploaded files. |
 
 ---
 
-## Environment Variables
+## ROUTING TOPOLOGY
 
-All environment variables used by the client must be prefixed with `VITE_` so that Vite exposes them at build time.
+The application isolates unauthorized users from dashboard access dynamically via Component Wrappers.
 
-| Variable | Description | Required |
+### Public Routes
+Unrestricted operations tailored for generic browsing.
+| Path Variable | Destined Component | Description |
 |---|---|---|
-| `VITE_SUPABASE_URL` | The URL of your Supabase project | Yes |
-| `VITE_SUPABASE_ANON_KEY` | The public anonymous key from your Supabase project | Yes |
-| `VITE_MIDTRANS_CLIENT_KEY` | Midtrans client key for payment processing | Yes |
-| `VITE_MIDTRANS_IS_PRODUCTION` | Set to `true` in production, `false` for sandbox | Yes |
-| `VITE_GOOGLE_CLIENT_ID` | Google OAuth client ID for social login | Optional |
-| `VITE_GOOGLE_CALLBACK_URL` | OAuth callback URL — must match the one configured in Supabase Auth providers | Optional |
+| `/` | `Home` | Landing hero component with featured selections. |
+| `/{login, register}-page` | `Login`, `Register`| Primary authentication gates. |
+| `/categories` | `Categories` | Grid displaying all product taxonomy. |
+| `/product/:id` | `ProductDetail` | Singular product overview containing descriptions and reviews. |
+| `/seller/:id` | `SellerDetail` | Specific storefront mapping containing paginated seller inventories. |
+| `/shopping-cart` | `Cart` | Volatile shopping list calculating aggregate costs and dynamic shop vouchers. |
+| `/shop-catalogue` | `Catalogue` | Extensive listing of all general products unfiltered. |
 
-See `.env.example` for a template. Never commit the `.env` file.
-
----
-
-## Database Schema
-
-The following tables are expected in Supabase:
-
-**profiles** — Extended user data linked to `auth.users`
-- `id` uuid (primary key, references auth.users)
-- `email` text
-- `full_name` text
-- `avatar_url` text
-- `role` text — `'user'` or `'seller'`
-- `phone` text
-- `gender` text
-
-**categories**
-- `id` uuid
-- `name` text
-- `slug` text (unique)
-- `icon` text (Material Symbols name)
-- `description` text
-- `image_url` text
-
-**products**
-- `id` uuid
-- `category_id` uuid (references categories)
-- `name` text
-- `description` text
-- `price` numeric
-- `stock` integer
-- `image_url` text
-- `created_at` timestamptz
-
-**orders**
-- `id` uuid
-- `user_id` uuid (references auth.users)
-- `status` text — `pending | shipped | delivered | completed | cancelled`
-- `total_amount` numeric
-- `shipping_address_id` uuid
-- `created_at` timestamptz
-
-**order_items**
-- `id` uuid
-- `order_id` uuid (references orders)
-- `product_id` uuid (references products)
-- `quantity` integer
-- `price_at_purchase` numeric
-
-**addresses**
-- `id` uuid
-- `user_id` uuid (references auth.users)
-- `label` text
-- `full_name` text
-- `phone` text
-- `address_line` text
-- `city` text
-- `province` text
-- `postal_code` text
-- `is_default` boolean
-
-**wishlists**
-- `id` uuid
-- `user_id` uuid (references auth.users)
-- `product_id` uuid (references products)
-- `created_at` timestamptz
-
----
-
-## Available Scripts
-
-| Script | Description |
-|---|---|
-| `npm run dev` | Start the Vite development server with hot module replacement |
-| `npm run build` | Type-check and produce an optimised production build in `dist/` |
-| `npm run preview` | Serve the production build locally for verification |
-| `npm run lint` | Run ESLint across all source files |
-
----
-
-## Routing Overview
-
-| Path | Component | Access |
+### Protected User Dashboard Routes
+These routes mandate an active and verified JWT token. Access without authorization forcibly redirects to `/login-page`.
+| Path Variable | Destined Component | Description |
 |---|---|---|
-| `/` | LandingPage | Public |
-| `/login-page` | Login | Public |
-| `/register-page` | Register | Public |
-| `/about` | About | Public |
-| `/shop-catalogue` | Catalogue | Public |
-| `/categories` | Categories | Public |
-| `/categories/:slug` | CategoryProducts | Public |
-| `/product/:id` | ProductDetail | Public |
-| `/shopping-cart` | Cart | Public |
-| `/checkout` | Checkout | Authenticated user |
-| `/user-dashboard` | Dashboard Overview | Authenticated user |
-| `/user-dashboard/orders` | Orders | Authenticated user |
-| `/user-dashboard/wishlist` | Wishlist | Authenticated user |
-| `/user-dashboard/profile` | Profile | Authenticated user |
-| `/user-dashboard/addresses` | Addresses | Authenticated user |
-| `/admin-dashboard-overview` | Admin Overview | Seller only |
-| `/admin-product-management` | Products | Seller only |
-| `/admin-category-management` | Categories | Seller only |
-| `/admin-order-management` | Orders | Seller only |
-| `/admin-discounts` | Discounts | Seller only |
-| `/admin-reports-analytics` | Analytics | Seller only |
+| `/user-dashboard` | `DashboardOverview` | Summary of ongoing transactions and recent favorites. |
+| `/user-dashboard-addresses`| `Addresses` | CRUD operations for shipping coordinates. |
+| `/user-dashboard-orders` | `Orders` | Historical data on previous transactions. |
+| `/user-dashboard-chat` | `ChatPage` | Realtime communication with specific Sellers. |
+| `/checkout-flow` | `Checkout` | Finalizes order confirmation drawing data from `nexus_cart`. |
+
+### Protected Seller Administration Routes
+Access is solely permitted if the user context validates `role === 'seller'`. Standard users will be prohibited from observing these structures.
+| Path Variable | Destined Component | Description |
+|---|---|---|
+| `/admin-dashboard-overview`| `AdminOverview` | Immediate statistical look onto revenue metrics. |
+| `/admin-product-management`| `ProductsAdmin` | Add, update, archive inventory items. |
+| `/admin-category-management`|`CategoriesAdmin` | Establish or delete grouping configurations. |
+| `/admin-order-management` | `OrdersAdmin` | Monitor incoming customer receipts and shift logistic tracking states. |
+| `/admin-reports-analytics` | `AnalyticsAdmin` | Render specific aggregations of performance histories. |
+| `/admin-dashboard-chat` | `SellerChatPage` | Communication funnel listening explicitly to buyer demands. |
 
 ---
 
-## Authentication and Authorization
+## STATE MANAGEMENT CONVENTIONS
 
-Authentication is handled entirely by Supabase Auth. The application uses `supabase.auth.getUser()` on every protected page to verify the session server-side.
+To avoid massive prop-drilling without adding complex external dependencies like Redux, Nexus React utilizes several strategies based on volatility.
 
-Role enforcement works as follows:
+### 1. Persistent Caching (Local Storage)
+- **`nexus_token`**: Commits the JWT payload to client browser to retain session across reloads. Monitored closely via Axios Interceptors.
+- **`nexus_cart`**: A stringified array of item hashes. This enables anonymous generic cart viewing until the checkout phase demands hard user persistence.
 
-- Pages under `/user-dashboard/*` redirect to `/login-page` if no session is found.
-- Pages under `/admin-*` redirect to `/login-page` if no session exists, or to `/user-dashboard` if the user's `role` in the `profiles` table is not `'seller'`.
-- The navbar reads the session via `onAuthStateChange` to show authenticated UI (user avatar, dropdown with dashboard link and logout) versus unauthenticated UI (login and register buttons).
+### 2. Context Application
+- **`UserContext`**: Wraps the entirety of `App.tsx`. Exposes `{ currentUser, login(), logout() }`. Automatically checks token validity against the backend on first mount.
+- **`PopupContext`**: Provides a global instance ensuring `toast()` popups manifest consistently at the absolute root stacking level, independently of what component generated the prompt.
 
-Cart data is persisted in `localStorage` under the key `nexus_cart` and synchronised across tabs via a custom `nexus:cart-updated` DOM event.
+### 3. Client Pagination Mechanism
+Used explicitly in grids anticipating massive outputs (e.g., Seller Profiles). Slices array mappings relative to static page lengths (const index bounds) retaining fast browser-centric computational sorting rendering large elements virtually unnecessary.
 
 ---
 
-## Deployment
+## KEY FEATURE WORKFLOWS
 
-The application is a standard Vite SPA and can be deployed to any static hosting provider.
+### The Cart and Dynamic Vouchers
+Because carts can be comprised of items spanning multiple detached sellers, `Cart.tsx` implements complex aggregate logic evaluating `item.seller_id`. 
+Instead of rigid percentage discounts, the frontend isolates matching elements related to specific vendors, generating isolated voucher buttons dynamically (e.g., generating `TOKOAHEMAT` automatically evaluating to exact array scopes instead of global totals).
 
-**Build for production:**
+### Authentication Verification Cycle
+Rather than executing raw fetches on every protected component, `src/lib/api.ts` implements interceptors:
+1. Rejects outward requests omitting `Authorization: Bearer`.
+2. Inspects inward validations. If the server throws a `401 Unauthorized` claiming key expiration, the `api` silently tries querying `/api/auth/refresh`.
+3. Following token renewal, the initial blocked call is repeated autonomously achieving invisible session rotation.
 
-```bash
-npm run build
-```
+### Realtime Communication Bridge
+The Chat functionality integrates `socket.io-client` connected via a React `useEffect` hook. Connection scopes target a predetermined backend URL, listening and responding primarily for `receive_message`. Emitting messages sends JSON objects wrapping payload strings bypassing classic HTTP REST constraints achieving zero-latency feedback.
 
-The output is placed in the `dist/` directory.
+---
 
-**Recommended platforms:** Vercel, Netlify, Cloudflare Pages.
+## INITIATION AND STARTUP GUIDELINES
 
-When deploying, set the environment variables `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` in the platform's environment settings. Configure the hosting platform to redirect all requests to `index.html` to support client-side routing.
-
-**Vercel example (`vercel.json`):**
-
-```json
-{
-  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
-}
-```
-
-**Netlify example (`public/_redirects`):**
-
-```
-/*  /index.html  200
-```
+1. Ensure Node.js and NPM are present on the local machine.
+2. Prepare the `.env` settings based on the available Backend port.
+3. Install package distributions:
+   ```bash
+   npm install
+   ```
+4. Deploy the Local Development Server:
+   ```bash
+   npm run dev
+   ```
+5. Navigate explicitly to `http://localhost:5173` inside a modern web browser to interact with the Nexus Web application.

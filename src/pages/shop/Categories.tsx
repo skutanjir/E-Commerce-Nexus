@@ -4,9 +4,9 @@ import Navbar from "../../components/layout/Navbar";
 import Footer from "../../components/layout/Footer";
 import { api } from "../../lib/api";
 
-import type { Category } from "../../types";
+import type { Category, CategoryWithCount } from "../../types";
 
-type CategoryWithCount = Category & { product_count?: number };
+const CATS_PER_PAGE = 12;
 
 export default function CategoriesPage() {
   const [categories, setCategories] = useState<CategoryWithCount[]>([]);

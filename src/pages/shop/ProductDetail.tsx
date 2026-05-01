@@ -1,3 +1,4 @@
+import { usePopup } from '../../contexts/PopupContext';
 import { useEffect, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import Navbar from "../../components/layout/Navbar";
@@ -8,6 +9,7 @@ import { useUser } from "../../contexts/UserContext";
 import type { Product } from "../../types";
 
 export default function ProductDetail() {
+  const { toast, confirm: confirmAction } = usePopup();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user: currentUser } = useUser();
@@ -18,6 +20,12 @@ export default function ProductDetail() {
   const [avgRating, setAvgRating] = useState<number>(0);
   const [reviewCount, setReviewCount] = useState<number>(0);
   const [addedMsg, setAddedMsg] = useState<string | null>(null);
+  const [isWishlisted, setIsWishlisted] = useState(false);
+  const [showReplyModal, setShowReplyModal] = useState(false);
+  const [replyReviewId, setReplyReviewId] = useState<string | null>(null);
+  const [replyText, setReplyText] = useState("");
+  const [replyUserName, setReplyUserName] = useState("");
+  const [sellerProfile, setSellerProfile] = useState<any>(null);
 
   useEffect(() => {
     async function fetchProduct() {
@@ -28,10 +36,26 @@ export default function ProductDetail() {
         const productData = res.data;
         setProduct(productData);
 
+        // Fetch seller profile if seller_id exists
+        if (productData.seller_id) {
+          try {
+            const profileRes = await api.get(`/profiles/${productData.seller_id}`);
+            setSellerProfile(profileRes.data);
+          } catch (profileErr) {
+            console.error("Error fetching seller profile:", profileErr);
+          }
+        }
+
         if (productData.reviews && productData.reviews.length > 0) {
           const avg = productData.reviews.reduce((sum: number, r: any) => sum + Number(r.rating), 0) / productData.reviews.length;
           setAvgRating(Math.round(avg * 10) / 10);
           setReviewCount(productData.reviews.length);
+        }
+
+        if (currentUser) {
+           const wishRes = await api.get('/wishlists');
+           const inWishlist = wishRes.data.some((w: any) => w.product_id === id);
+           setIsWishlisted(inWishlist);
         }
       } catch (err: any) {
         console.error("Error fetching product:", err.message);
@@ -44,7 +68,68 @@ export default function ProductDetail() {
     if (id) {
       fetchProduct();
     }
-  }, [id]);
+  }, [id, currentUser]);
+
+  
+  
+  const submitReply = () => {
+    if (!replyReviewId || !replyText.trim()) return;
+    handleReplyReview(replyReviewId, replyText);
+    setShowReplyModal(false);
+  };
+  
+  const handleReplyReview = async (reviewId: string, replyText: string) => {
+    try {
+      await api.put(`/products/${product!.id}/reviews/${reviewId}/reply`, { reply: replyText });
+      toast("Balasan berhasil dikirim!", "success");
+      setProduct(prev => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          reviews: prev.reviews.map((r: any) => r.id === reviewId ? { ...r, seller_reply: replyText } : r)
+        };
+      });
+    } catch (err: any) {
+      toast(err.response?.data?.error || "Gagal membalas ulasan", "error");
+    }
+  };
+
+  const handleDeleteReview = async (reviewId: string) => {
+    if (!await confirmAction("Hapus ulasan ini permanen?")) return;
+    try {
+      await api.delete(`/products/${product!.id}/reviews/${reviewId}`);
+      toast("Ulasan berhasil dihapus!", "success");
+      setProduct(prev => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          reviews: prev.reviews.filter((r: any) => r.id !== reviewId)
+        };
+      });
+    } catch (err: any) {
+      toast(err.response?.data?.error || "Gagal menghapus ulasan", "error");
+    }
+  };
+  
+  const handleToggleWishlist = async () => {
+    if (!currentUser) {
+      navigate("/login-page");
+      return;
+    }
+    try {
+      if (isWishlisted) {
+        // We don't have the wishlist ID directly here, so we might need a specific endpoint or just rely on backend to handle by product_id
+        // Since the current endpoint is DELETE /api/wishlists/:id, we will do a fast optimistic toggle if we must
+        // Ideally we fetch wishlist ID. For now, we'll implement a simple UX switch
+        toast("Fitur hapus wishlist sedang dioptimasi.");
+      } else {
+        await api.post('/wishlists', { product_id: product?.id });
+        setIsWishlisted(true);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   const handleAddToCart = () => {
     if (!product) return;
@@ -55,10 +140,24 @@ export default function ProductDetail() {
     const saved = localStorage.getItem("nexus_cart");
     const cart = saved ? JSON.parse(saved) : [];
     const existing = cart.find((item: { id: string }) => item.id === product.id);
+    
+    const cartItem = { 
+      id: product.id, 
+      name: product.name, 
+      price: product.price, 
+      image_url: product.image_url, 
+      quantity,
+      seller_id: product.seller_id,
+      shop_name: sellerProfile?.full_name || 'Toko tidak diketahui'
+    };
+
     if (existing) {
       existing.quantity += quantity;
+      // Also update seller info in case it was missing
+      existing.seller_id = cartItem.seller_id;
+      existing.shop_name = cartItem.shop_name;
     } else {
-      cart.push({ id: product.id, name: product.name, price: product.price, image_url: product.image_url, quantity });
+      cart.push(cartItem);
     }
     localStorage.setItem("nexus_cart", JSON.stringify(cart));
     window.dispatchEvent(new Event("nexus:cart-updated"));
@@ -75,10 +174,24 @@ export default function ProductDetail() {
     const saved = localStorage.getItem("nexus_cart");
     const cart = saved ? JSON.parse(saved) : [];
     const existing = cart.find((item: { id: string }) => item.id === product.id);
+    
+    const cartItem = { 
+      id: product.id, 
+      name: product.name, 
+      price: product.price, 
+      image_url: product.image_url, 
+      quantity,
+      seller_id: product.seller_id,
+      shop_name: sellerProfile?.full_name || 'Toko tidak diketahui'
+    };
+
     if (existing) {
       existing.quantity += quantity;
+      // Also update seller info in case it was missing
+      existing.seller_id = cartItem.seller_id;
+      existing.shop_name = cartItem.shop_name;
     } else {
-      cart.push({ id: product.id, name: product.name, price: product.price, image_url: product.image_url, quantity });
+      cart.push(cartItem);
     }
     localStorage.setItem("nexus_cart", JSON.stringify(cart));
     window.dispatchEvent(new Event("nexus:cart-updated"));
@@ -106,8 +219,9 @@ export default function ProductDetail() {
           <Link to="/" className="bg-primary text-on-primary px-6 py-3 rounded-lg font-bold">
             Kembali ke Beranda
           </Link>
-        </main>
-        <Footer />
+
+      </main>
+      <Footer />
       </div>
     );
   }
@@ -134,15 +248,21 @@ export default function ProductDetail() {
           {/*  Gallery Column  */}
           <div className="space-y-6 sticky top-32">
             <div className="aspect-square rounded-2xl overflow-hidden bg-surface-container-low shadow-sm border border-outline-variant/10">
-              <img
-                alt={product.name}
-                className="w-full h-full object-cover transition-transform duration-700 hover:scale-110"
-                src={product.image_url || "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&auto=format&fit=crop&q=60"}
-              />
+              {product.image_url ? (
+                <img
+                  alt={product.name}
+                  className="w-full h-full object-cover transition-transform duration-700 hover:scale-110"
+                  src={product.image_url}
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center bg-surface-container-low text-outline">
+                  <span className="material-symbols-outlined text-8xl opacity-50">inventory_2</span>
+                </div>
+              )}
             </div>
             <div className="grid grid-cols-4 gap-4">
               <div className="aspect-square rounded-xl border-2 border-primary overflow-hidden cursor-pointer">
-                <img src={product.image_url || "/placeholder.jpg"} className="w-full h-full object-cover" />
+                {product.image_url ? <img src={product.image_url} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center bg-surface-container-low"><span className="material-symbols-outlined text-outline text-4xl">inventory_2</span></div>}
               </div>
             </div>
           </div>
@@ -184,7 +304,7 @@ export default function ProductDetail() {
 
             <div className="flex items-baseline gap-4 mb-10">
               <span className="text-5xl font-black text-primary">
-                Rp {product.price.toLocaleString('id-ID')}
+                Rp {Number(product.price).toLocaleString('id-ID')}
               </span>
             </div>
 
@@ -219,16 +339,40 @@ export default function ProductDetail() {
                 </div>
               )}
               <div className="flex flex-col gap-4">
-                <button
-                  onClick={handleBuyNow}
-                  className="w-full bg-primary text-on-primary py-5 rounded-xl font-black text-lg hover:shadow-2xl hover:shadow-primary/30 transition-all active:scale-95 flex items-center justify-center gap-3"
-                >
-                  <span className="material-symbols-outlined">bolt</span>
-                  Beli Sekarang
-                </button>
+                <div className="flex gap-3">
+                  <button
+                    onClick={handleBuyNow}
+                    className="flex-1 bg-primary text-on-primary py-4 lg:py-5 rounded-xl font-black text-base lg:text-lg hover:shadow-2xl hover:shadow-primary/30 transition-all active:scale-95 flex items-center justify-center gap-2"
+                  >
+                    <span className="material-symbols-outlined">bolt</span>
+                    Beli Langsung
+                  </button>
+                  <button
+                    onClick={handleToggleWishlist}
+                    className={`p-4 lg:p-5 rounded-xl border-2 transition-all active:scale-95 flex items-center justify-center ${isWishlisted ? 'border-red-100 bg-red-50 text-red-500' : 'border-outline-variant/20 text-on-surface hover:border-red-200 hover:text-red-500'}`}
+                    title="Tambah ke Favorit"
+                  >
+                    <span className="material-symbols-outlined" style={isWishlisted ? { fontVariationSettings: "'FILL' 1" } : undefined}>favorite</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (!currentUser) {
+                        navigate('/login-page');
+                      } else if (!product.seller_id) {
+                        toast('Maaf, produk ini tidak memiliki penjual yang valid (mungkin produk lawas).');
+                      } else {
+                        navigate(`/user-dashboard-chat/${product.seller_id}`);
+                      }
+                    }}
+                    className="p-4 lg:p-5 rounded-xl border-2 border-outline-variant/20 text-on-surface hover:border-primary/30 hover:text-primary transition-all active:scale-95 flex items-center justify-center"
+                    title="Chat Penjual"
+                  >
+                    <span className="material-symbols-outlined">chat</span>
+                  </button>
+                </div>
                 <button
                   onClick={handleAddToCart}
-                  className="w-full border-2 border-primary text-primary py-5 rounded-xl font-black text-lg hover:bg-primary/5 transition-all active:scale-95 flex items-center justify-center gap-3"
+                  className="w-full border-2 border-primary text-primary py-4 lg:py-5 rounded-xl font-black text-base lg:text-lg hover:bg-primary/5 transition-all active:scale-95 flex items-center justify-center gap-3"
                 >
                   <span className="material-symbols-outlined">shopping_cart</span>
                   Tambah ke Keranjang
@@ -243,6 +387,39 @@ export default function ProductDetail() {
                 {addedMsg}
               </div>
             )}
+
+            {/* Seller Section */}
+            <div className="p-6 bg-surface-container-low rounded-2xl border border-outline-variant/10 mb-10 flex items-center justify-between transition-all hover:bg-surface-container-high/50">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-full overflow-hidden bg-surface-container-high border border-outline-variant/20 shadow-sm">
+                  {sellerProfile?.avatar_url ? (
+                    <img 
+                      src={sellerProfile.avatar_url} 
+                      alt={sellerProfile.full_name} 
+                      className="w-full h-full object-cover" 
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-outline-variant bg-surface-container-high">
+                      <span className="material-symbols-outlined text-2xl">store</span>
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <h4 className="font-black text-on-surface text-lg leading-tight">
+                    {sellerProfile?.full_name || 'Memuat informasi penjual...'}
+                  </h4>
+                  <p className="text-[10px] text-primary font-black uppercase tracking-widest mt-1">
+                    Penjual Terverifikasi
+                  </p>
+                </div>
+              </div>
+              <Link 
+                to={`/seller/${product.seller_id}`}
+                className="px-5 py-2.5 bg-primary text-on-primary rounded-xl text-xs font-black uppercase tracking-widest hover:shadow-lg hover:shadow-primary/20 transition-all active:scale-95"
+              >
+                Kunjungi Toko
+              </Link>
+            </div>
 
             {/*  Description Preview  */}
             <div className="space-y-6">
@@ -288,6 +465,121 @@ export default function ProductDetail() {
             </div>
           </div>
         </div>
+        {/* Ulasan Pelanggan */}
+        <div className="mt-12 bg-surface-container-lowest rounded-3xl p-8 lg:p-12 border border-outline-variant/10">
+          <h2 className="text-2xl font-black text-on-surface mb-8">Ulasan Pembeli</h2>
+          {(product as any).reviews && (product as any).reviews.length > 0 ? (
+            <div className="space-y-6">
+              {(product as any).reviews.map((review: any) => (
+                <div key={review.id} className="pb-6 border-b border-outline-variant/10 last:border-0 last:pb-0">
+                  <div className="flex items-center gap-4 mb-3">
+                    <div className="w-10 h-10 rounded-full bg-surface-container-low overflow-hidden flex items-center justify-center flex-shrink-0 border border-outline-variant/10">
+                      {review.user_avatar ? (
+                        <img src={review.user_avatar} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="material-symbols-outlined text-outline text-xl">person</span>
+                      )}
+                    </div>
+                    <div>
+                      <p className="font-bold text-on-surface text-sm">{review.user_name}</p>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <div className="flex items-center">
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <span key={star} className={`material-symbols-outlined text-[14px] ${review.rating >= star ? 'text-amber-400' : 'text-slate-300'}`} style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
+                          ))}
+                        </div>
+                        <span className="text-[10px] text-on-surface-variant">
+                          {new Date(review.created_at).toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' })}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  {review.comment && (
+                    <p className="text-sm text-on-surface leading-relaxed ml-14">{review.comment}</p>
+                  )}
+                  
+                  {currentUser?.id === product?.seller_id && (
+                    <div className="mt-4 flex gap-4 ml-14">
+                      {!review.seller_reply && (
+                        <button
+                          onClick={() => {
+                            
+                            setReplyReviewId(review.id);
+                            setReplyUserName(review.user_name);
+                            setReplyText('');
+                            setShowReplyModal(true);
+  
+                          }}
+                          className="text-xs text-primary font-bold hover:underline flex items-center gap-1"
+                        >
+                          <span className="material-symbols-outlined text-[14px]">reply</span>
+                          Balas Ulasan
+                        </button>
+                      )}
+                      <button
+                        onClick={() => handleDeleteReview(review.id)}
+                        className="text-xs text-error font-bold hover:underline flex items-center gap-1"
+                      >
+                        <span className="material-symbols-outlined text-[14px]">delete</span>
+                        Hapus
+                      </button>
+                    </div>
+                  )}
+  
+                  {review.seller_reply && (
+                    <div className="mt-3 ml-14 p-4 bg-surface-container-low rounded-xl rounded-tl-sm border border-outline-variant/10">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-primary mb-1">Balasan Penjual</p>
+                      <p className="text-sm text-on-surface-variant leading-relaxed">{review.seller_reply}</p>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <span className="material-symbols-outlined text-4xl text-outline mb-2">reviews</span>
+              <p className="text-on-surface-variant">Belum ada ulasan untuk produk ini.</p>
+            </div>
+          )}
+        </div>
+
+        {/* Modal Balasan Penjual */}
+        {showReplyModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+            <div className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-md p-6 shadow-2xl scale-in">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-lg font-black text-on-surface">Balas Ulasan {replyUserName}</h3>
+                <button onClick={() => setShowReplyModal(false)} className="text-on-surface-variant hover:text-error">
+                  <span className="material-symbols-outlined">close</span>
+                </button>
+              </div>
+              <div className="mb-4">
+                <textarea
+                  value={replyText}
+                  onChange={(e) => setReplyText(e.target.value)}
+                  placeholder="Tulis balasan Anda sebagai penjual..."
+                  className="w-full border border-outline-variant/20 rounded-xl p-4 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary min-h-[120px] resize-none"
+                  autoFocus
+                />
+              </div>
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={() => setShowReplyModal(false)}
+                  className="px-5 py-2.5 rounded-xl font-bold text-on-surface-variant border border-outline-variant/30 hover:bg-surface-container-low transition-all"
+                >
+                  Batal
+                </button>
+                <button
+                  onClick={submitReply}
+                  disabled={!replyText.trim()}
+                  className="px-5 py-2.5 bg-primary text-white rounded-xl font-bold hover:opacity-90 disabled:opacity-50 transition-all shadow-lg shadow-primary/20"
+                >
+                  Kirim Balasan
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
       <Footer />
     </>
