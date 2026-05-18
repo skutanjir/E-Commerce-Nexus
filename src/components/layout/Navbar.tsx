@@ -262,13 +262,6 @@ export default function Navbar() {
                       <span className="material-symbols-outlined text-base">dashboard</span>
                       Dashboard
                     </Link>
-                    <Link
-                      to="/user-dashboard-profile"
-                      className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 text-slate-700 dark:text-slate-300 hover:text-blue-600 transition-colors text-sm"
-                    >
-                      <span className="material-symbols-outlined text-base">person</span>
-                      Profil Saya
-                    </Link>
                     <button
                       onClick={handleLogout}
                       className="w-full flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 transition-colors text-sm mt-1 border-t border-slate-100 dark:border-slate-700"
