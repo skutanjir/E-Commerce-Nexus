@@ -1,12 +1,8 @@
 import { usePopup } from '../../contexts/PopupContext';
 import { useEffect, useRef, useState } from 'react';
-import { io, Socket } from 'socket.io-client';
 import { api } from '../../lib/api';
 import { useAdmin } from '../../contexts/AdminContext';
 import type { Order, ChatMessage } from '../../types';
-
-// Extract the base URL from API URL (removing /api if present) for socket connection
-const SOCKET_URL = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
 
 type StatusFilter = 'all' | 'pending' | 'shipped' | 'delivered' | 'cancelled';
 
@@ -26,9 +22,16 @@ const STATUS_COLOR: Record<string, string> = {
   cancelled: 'bg-slate-100 text-slate-700',
 };
 
+type OrderWithProfile = Order & {
+  profile?: {
+    full_name?: string | null;
+    email?: string | null;
+  };
+};
+
 // Seller doesn't have an ID directly inside profile anymore if we depend on context, using user.id inside context if needed
 // Actually, let's grab it from the context
-function ChatPanel({ order, sellerId, onClose }: { order: Order; sellerId: string | null; onClose: () => void }) {
+function ChatPanel({ order, sellerId, onClose }: { order: OrderWithProfile; sellerId: string | null; onClose: () => void }) {
   const { toast } = usePopup();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [text, setText] = useState('');
@@ -36,63 +39,37 @@ function ChatPanel({ order, sellerId, onClose }: { order: Order; sellerId: strin
   const [uploading, setUploading] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const socketRef = useRef<Socket | null>(null);
+  const buyerId = order.user_id;
 
   useEffect(() => {
+    if (!buyerId) return;
     async function loadMessages() {
       try {
-        const { data } = await api.get(`/chat/${order.id}`);
+        const { data } = await api.get(`/chat/messages/${buyerId}`);
         if (data) setMessages(data);
       } catch (err) {
         console.error(err);
       }
     }
     loadMessages();
-  }, [order.id]);
-
-  useEffect(() => {
-    if (!order.id) return;
-    const socket = io(SOCKET_URL, { reconnectionAttempts: 3, reconnectionDelayMax: 10000, timeout: 5000,
-      path: '/socket.io/',
-      transports: ['websocket', 'polling']
-    });
-
-    socketRef.current = socket;
-
-    socket.on('connect', () => {
-      socket.emit('join_order', order.id);
-    });
-
-    socket.on('new_message', (newMessage: ChatMessage) => {
-      if (newMessage.order_id === order.id) {
-        setMessages(prev => {
-          const exists = prev.some(m => m.id === newMessage.id);
-          return exists ? prev : [...prev, newMessage];
-        });
-      }
-    });
-
-    return () => {
-      if (socketRef.current) socketRef.current.disconnect();
-    };
-  }, [order.id]);
+  }, [buyerId]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
   const sendMessage = async (msgText?: string, imageUrl?: string) => {
-    if (!sellerId) return;
+    if (!sellerId || !buyerId) return;
     const messageToSend = msgText ?? text.trim();
     if (!messageToSend && !imageUrl) return;
     setSending(true);
 
     try {
-      await api.post('/chat', {
-        order_id: order.id,
+      const { data } = await api.post(`/chat/messages/${buyerId}`, {
         message: messageToSend || null,
         image_url: imageUrl || null
       });
+      if (data) setMessages(prev => prev.some(m => m.id === data.id) ? prev : [...prev, data]);
       setText('');
     } catch (err) {
       console.error(err);
@@ -104,7 +81,7 @@ function ChatPanel({ order, sellerId, onClose }: { order: Order; sellerId: strin
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !sellerId) return;
+    if (!file || !sellerId || !buyerId) return;
     if (file.size > 1024 * 1024) { toast('Ukuran foto maks 1 MB.'); return; }
     setUploading(true);
 
@@ -115,7 +92,7 @@ function ChatPanel({ order, sellerId, onClose }: { order: Order; sellerId: strin
       const res = await api.post('/chat/upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
-      await sendMessage('', res.data.imageUrl);
+      await sendMessage('', res.data.url);
     } catch (err) {
       console.error(err);
       toast('Gagal upload foto.', 'error');
@@ -295,9 +272,8 @@ export default function AdminOrderManagement() {
       await api.put(`/orders/${order.id}/cancel`);
       setAllOrders(prev => prev.map(o => o.id === order.id ? { ...o, status: 'cancelled' } : o));
 
-      if (adminProfile) {
-        await api.post('/chat', {
-          order_id: order.id,
+      if (adminProfile && order.user_id) {
+        await api.post(`/chat/messages/${order.user_id}`, {
           message: 'Maaf, pesanan Anda telah dibatalkan oleh penjual. Pengembalian dana akan diproses dalam 1–3 hari kerja.',
         });
       }

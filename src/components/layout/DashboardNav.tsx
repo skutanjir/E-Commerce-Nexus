@@ -8,7 +8,7 @@ interface DashboardNavProps {
   profile: Profile | null;
 }
 
-const SOCKET_URL = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
+const SOCKET_URL = window.location.origin;
 
 const getAvatarSrc = (url: string | undefined | null) => {
   if (!url) return undefined;
@@ -29,10 +29,7 @@ export default function DashboardNav({ profile }: DashboardNavProps) {
       if (res.data.unread_count > 0) setHasUnreadNotification(true);
     }).catch(() => {});
 
-    const socket = io(SOCKET_URL, { reconnectionAttempts: 3, reconnectionDelayMax: 10000, timeout: 5000,
-      path: '/socket.io/',
-      transports: ['websocket', 'polling']
-    });
+    const socket = io(SOCKET_URL, { reconnectionAttempts: 3, reconnectionDelayMax: 10000, timeout: 5000, path: '/socket.io/', transports: ['polling'] });
     socketRef.current = socket;
 
     socket.on('connect', () => {

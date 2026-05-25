@@ -95,6 +95,10 @@ export default function UserDashboardOrders() {
         comment,
         is_anonymous: isAnonymous
       });
+      setAllOrders(prev => prev.map(order => ({
+        ...order,
+        order_items: order.order_items?.map(item => item.product?.id === reviewProduct.id ? { ...item, is_reviewed: true } : item)
+      })));
       toast('Terima kasih! Ulasan Anda berhasil dikirim.', 'success');
       setShowReview(false);
     } catch (err: any) {

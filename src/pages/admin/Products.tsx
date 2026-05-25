@@ -220,7 +220,7 @@ export default function AdminProductManagement() {
                     </td>
                   </tr>
                 ) : (
-                  filteredProducts.map(product => (
+                  filteredProducts.filter(product => product.id).map(product => (
                     <tr key={product.id} className="hover:bg-surface/50 transition-colors group">
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">

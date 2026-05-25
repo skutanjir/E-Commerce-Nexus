@@ -9,7 +9,7 @@ import DashboardNav from '../../components/layout/DashboardNav';
 import type { Order, ChatMessage } from '../../types';
 
 // Extract the base URL from API URL (removing /api if present) for socket connection
-const SOCKET_URL = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
+const SOCKET_URL = window.location.origin;
 
 // ─── Chat List View ────────────────────────────────────────────────────────────
 function ChatList({ navigate }: { navigate: ReturnType<typeof useNavigate> }) {
@@ -114,6 +114,10 @@ function ChatDetail({ contactId, navigate }: {
         if (thisContact) {
           setContactName(thisContact.full_name);
           setContactAvatar(thisContact.avatar_url);
+        } else {
+          const { data } = await api.get(`/profiles/${contactId}`);
+          setContactName(data.full_name || 'Penjual');
+          setContactAvatar(data.avatar_url || '');
         }
       } catch (err) {
         console.error(err);
@@ -128,10 +132,7 @@ function ChatDetail({ contactId, navigate }: {
   // Socket
   useEffect(() => {
     if (!user || !contactId) return;
-    const socket = io(SOCKET_URL, { reconnectionAttempts: 3, reconnectionDelayMax: 10000, timeout: 5000,
-      path: '/socket.io/',
-      transports: ['websocket', 'polling']
-    });
+    const socket = io(SOCKET_URL, { reconnectionAttempts: 3, reconnectionDelayMax: 10000, timeout: 5000, path: '/socket.io/', transports: ['polling'] });
     socketRef.current = socket;
 
     socket.on('connect', () => {
@@ -164,10 +165,11 @@ function ChatDetail({ contactId, navigate }: {
     setSending(true);
 
     try {
-      await api.post(`/chat/messages/${contactId}`, {
+      const { data } = await api.post(`/chat/messages/${contactId}`, {
         message: messageToSend || null,
         image_url: imageUrl || null
       });
+      if (data) setMessages(prev => prev.some(m => m.id === data.id) ? prev : [...prev, data]);
       setText('');
     } catch (err) {
       console.error('Failed to send message', err);

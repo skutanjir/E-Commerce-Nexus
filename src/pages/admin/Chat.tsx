@@ -8,7 +8,7 @@ import SellerSidebar from '../../components/layout/SellerSidebar';
 import DashboardNav from '../../components/layout/DashboardNav';
 import type { ChatMessage } from '../../types';
 
-const SOCKET_URL = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
+const SOCKET_URL = window.location.origin;
 
 function SellerChatList({ navigate }: { navigate: ReturnType<typeof useNavigate> }) {
   const { user } = useUser();
@@ -105,10 +105,14 @@ function SellerChatDetail({ contactId, navigate }: { contactId: string; navigate
         if (thisContact) {
           setContactName(thisContact.full_name);
           setContactAvatar(thisContact.avatar_url);
+        } else {
+          const { data } = await api.get(`/profiles/${contactId}`);
+          setContactName(data.full_name || 'Pelanggan');
+          setContactAvatar(data.avatar_url || '');
         }
       } catch (err) {
         console.error(err);
-        navigate('/admin-dashboard/chat');
+        navigate('/admin-dashboard-chat');
       } finally {
         setLoadingInitial(false);
       }
@@ -118,10 +122,7 @@ function SellerChatDetail({ contactId, navigate }: { contactId: string; navigate
 
   useEffect(() => {
     if (!user || !contactId) return;
-    const socket = io(SOCKET_URL, { reconnectionAttempts: 3, reconnectionDelayMax: 10000, timeout: 5000,
-      path: '/socket.io/',
-      transports: ['websocket', 'polling']
-    });
+    const socket = io(SOCKET_URL, { reconnectionAttempts: 3, reconnectionDelayMax: 10000, timeout: 5000, path: '/socket.io/', transports: ['polling'] });
     socketRef.current = socket;
 
     socket.on('connect', () => {
@@ -154,10 +155,11 @@ function SellerChatDetail({ contactId, navigate }: { contactId: string; navigate
     setSending(true);
 
     try {
-      await api.post(`/chat/messages/${contactId}`, {
+      const { data } = await api.post(`/chat/messages/${contactId}`, {
         message: messageToSend || null,
         image_url: imageUrl || null
       });
+      if (data) setMessages(prev => prev.some(m => m.id === data.id) ? prev : [...prev, data]);
       setText('');
     } catch (err) {
       console.error('Failed to send message', err);

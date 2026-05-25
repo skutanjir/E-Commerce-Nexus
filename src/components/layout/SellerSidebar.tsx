@@ -15,7 +15,7 @@ const navLinks = [
   { to: '/admin-order-management', label: 'Pesanan', icon: 'shopping_cart' },
   { to: '/admin-discounts', label: 'Diskon & Promo', icon: 'local_offer' },
   { to: '/admin-reports-analytics', label: 'Laporan', icon: 'analytics' },
-  { to: '/user-dashboard-profile', label: 'Profil Saya', icon: 'person' },
+  { to: '/admin-profile', label: 'Profil Saya', icon: 'person' },
 ];
 
 export default function SellerSidebar({ profile }: Props) {
@@ -129,7 +129,7 @@ export default function SellerSidebar({ profile }: Props) {
             <p className="text-sm font-bold text-slate-900 truncate">
               {profile?.full_name || 'Admin'}
             </p>
-            <p className="text-[10px] text-slate-400 uppercase tracking-wider font-bold">Seller Member</p>
+            <p className="text-[10px] text-slate-400 uppercase tracking-wider font-bold">Seller</p>
           </div>
         </div>
         

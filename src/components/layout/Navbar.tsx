@@ -5,7 +5,7 @@ import { api } from '../../lib/api';
 import { useUser } from '../../contexts/UserContext';
 import type { Category } from '../../types';
 
-const SOCKET_URL = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
+const SOCKET_URL = window.location.origin;
 
 function getCartCount(): number {
   const saved = localStorage.getItem("nexus_cart");
@@ -48,10 +48,7 @@ export default function Navbar() {
       if (res.data.unread_count > 0) setHasUnreadNotification(true);
     }).catch(() => {});
 
-    const socket = io(SOCKET_URL, { reconnectionAttempts: 3, reconnectionDelayMax: 10000, timeout: 5000,
-      path: '/socket.io/',
-      transports: ['websocket', 'polling']
-    });
+    const socket = io(SOCKET_URL, { reconnectionAttempts: 3, reconnectionDelayMax: 10000, timeout: 5000, path: '/socket.io/', transports: ['polling'] });
     socketRef.current = socket;
 
     socket.on('connect', () => {

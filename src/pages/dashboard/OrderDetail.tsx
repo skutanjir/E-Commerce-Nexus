@@ -1,7 +1,6 @@
 import { usePopup } from '../../contexts/PopupContext';
-import { useEffect, useRef, useState } from 'react';
-import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
-import { io, Socket } from 'socket.io-client';
+import { useEffect, useState } from 'react';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { api } from '../../lib/api';
 import { useUser } from '../../contexts/UserContext';
 import DashboardSidebar from '../../components/layout/DashboardSidebar';
@@ -16,8 +15,6 @@ declare global {
     };
   }
 }
-
-const SOCKET_URL = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
 
 const STATUS_LABEL: Record<string, string> = {
   pending: 'Menunggu Pembayaran',
@@ -88,6 +85,10 @@ export default function OrderDetail() {
         comment,
         is_anonymous: isAnonymous
       });
+      setOrder(prev => prev ? {
+        ...prev,
+        order_items: prev.order_items?.map(item => item.product?.id === reviewProduct.id ? { ...item, is_reviewed: true } : item)
+      } : prev);
       toast('Terima kasih! Ulasan Anda berhasil dikirim.', 'success');
       setShowReview(false);
     } catch (err: any) {

@@ -63,6 +63,7 @@ export default function App() {
           <Route path="/admin-discounts" element={<DiscountsAdmin />} />
           <Route path="/admin-dashboard-chat" element={<SellerChatPage />} />
           <Route path="/admin-dashboard-chat/:contactId" element={<SellerChatPage />} />
+          <Route path="/admin-profile" element={<Profile />} />
         </Route>
 
         <Route path="/admin-dashboard-fixed-layout" element={<AdminLayout />} />

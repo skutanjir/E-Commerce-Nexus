@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { api } from '../../lib/api';
 import { useUser } from '../../contexts/UserContext';
 import DashboardSidebar from '../../components/layout/DashboardSidebar';
@@ -33,8 +33,10 @@ function isAllowedImageUrl(url: string): boolean {
 }
 
 export default function UserDashboardProfile() {
+  const location = useLocation();
   const navigate = useNavigate();
   const { user, profile, authLoading, refreshProfile } = useUser();
+  const isAdminProfile = location.pathname === '/admin-profile';
 
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
@@ -195,13 +197,13 @@ export default function UserDashboardProfile() {
 
   return (
     <>
-      <DashboardNav profile={profile} />
+      {!isAdminProfile && <DashboardNav profile={profile} />}
 
-      <main className="pt-24 pb-16 px-4 md:px-8 max-w-7xl mx-auto min-h-screen">
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
-          <DashboardSidebar profile={profile} />
+      <main className={isAdminProfile ? 'max-w-[1600px] mx-auto' : 'pt-24 pb-16 px-4 md:px-8 max-w-7xl mx-auto min-h-screen'}>
+        <div className={isAdminProfile ? '' : 'grid grid-cols-1 md:grid-cols-12 gap-8'}>
+          {!isAdminProfile && <DashboardSidebar profile={profile} />}
 
-          <div className="md:col-span-9">
+          <div className={isAdminProfile ? '' : 'md:col-span-9'}>
             <header className="mb-8">
               <h1 className="text-3xl font-extrabold tracking-tight text-on-surface">Profil</h1>
               <p className="text-on-surface-variant mt-2">Kelola informasi akun Anda.</p>

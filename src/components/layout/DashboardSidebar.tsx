@@ -34,7 +34,7 @@ export default function DashboardSidebar({ profile }: DashboardSidebarProps) {
     { to: '/admin-dashboard-products', label: 'Produk', icon: 'inventory_2' },
     { to: '/admin-dashboard-categories', label: 'Kategori', icon: 'category' },
     { to: '/admin-dashboard-orders', label: 'Pesanan', icon: 'receipt_long' },
-    { to: '/profile', label: 'Profil', icon: 'person' },
+    { to: '/admin-profile', label: 'Profil', icon: 'person' },
   ];
 
   const links = isSeller ? sellerLinks : userLinks;

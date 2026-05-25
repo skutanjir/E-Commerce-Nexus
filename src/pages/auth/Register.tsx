@@ -128,7 +128,7 @@ export default function RegisterPage() {
 
               <div className="space-y-2">
                 <label className="block text-sm font-semibold text-on-surface">Role</label>
-                <div className="flex p-1 bg-surface-container-low rounded-lg w-full max-w-[300px]">
+                <div className="flex p-1 bg-surface-container-low rounded-lg w-full max-w-[380px]">
                   <button
                     className={`flex-1 py-2 text-sm font-medium rounded-md transition-colors ${
                       formData.role === "user"
@@ -138,7 +138,7 @@ export default function RegisterPage() {
                     type="button"
                     onClick={() => setFormData({ ...formData, role: "user" })}
                   >
-                    User
+                    Member
                   </button>
                   <button
                     className={`flex-1 py-2 text-sm font-medium rounded-md transition-colors ${
